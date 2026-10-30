@@ -1,8 +1,8 @@
-# Piggy - Piggy
+# Piggy
 
 **Versi unduhan: [0.1.0.0 — Initial Development Baseline](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.0.0)**
 
-**Versi pengembangan: 0.1.0.1 — Native Windows Window Frame**
+**Versi pengembangan: 0.1.0.1 — Native Windows Frame & Piggy Identity**
 
 **Status: Unreleased.** Versi ini sedang disiapkan pada kode sumber dan build lokal. Tag, GitHub Release, dan promosi kanal updater menunggu persetujuan publikasi.
 
@@ -17,6 +17,10 @@ A portable, offline Windows application for personal finances across multiple ba
 Jendela utama sekarang memakai title bar, bingkai, dan tombol minimize/maximize/close bawaan Windows. Resize, maximize, restore, dan Snap ditangani OS; ketersediaan Snap mengikuti versi serta pengaturan Windows. Tombol **Save** berada di sisi kanan baris **File / Home / Data / View**, dengan tooltip **Save (Ctrl+S)**. Nama dokumen dan tanda **\*** untuk perubahan yang belum disimpan tetap tampil di title bar.
 
 Tema isi aplikasi tetap memakai tampilan ribbon magenta. Dokumen `.mpb`, perhitungan keuangan, dan proses Save manual tetap kompatibel. Lihat [catatan update lengkap](RELEASE_NOTES.md).
+
+Logo yang disetujui menampilkan babi magenta–putih yang memakan koin emas, dengan tulisan **Piggy**. Ikon aplikasi memakai koin emas saja. Layar awal kini terpusat dengan urutan **logo → New → Open**; versi dan tombol update tetap di kanan bawah. Lihat [aset dan panduan identitas](docs/BRANDING.md).
+
+Nama yang tampil adalah **Piggy**. Nama berkas **Piggy - Piggy.exe** dan paket update tetap dipertahankan agar kompatibel dengan updater 0.1.0.0 yang sudah dirilis.
 
 ## Menjalankan
 

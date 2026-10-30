@@ -27,8 +27,8 @@ public sealed class PurposeManagerWindow : Window
 {
     public PurposeManagerWindow(Window owner, DocumentSession session, Action changed)
     {
-        Ui.ApplyWindowStyle(this); Owner = owner; Title = "Purposes — Piggy - Piggy";
-        Width = 680; Height = 500; MinWidth = 500; MinHeight = 340; WindowStartupLocation = WindowStartupLocation.CenterOwner; Icon = Ui.Drawing("savings", Ui.Accent);
+        Ui.ApplyWindowStyle(this); Owner = owner; Title = "Purposes — Piggy";
+        Width = 680; Height = 500; MinWidth = 500; MinHeight = 340; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var root = new DockPanel { Margin = new Thickness(24) }; Content = root;
         var heading = Ui.Text("Purposes",22,bold:true); heading.Margin = new Thickness(0,0,0,12); DockPanel.SetDock(heading,Dock.Top); root.Children.Add(heading);
         var help = Ui.Text("Labels for transfer allocations, separate from income and expense categories.",14,Ui.Muted); help.Margin = new Thickness(0,0,0,16); DockPanel.SetDock(help,Dock.Top); root.Children.Add(help);

@@ -41,7 +41,7 @@ internal sealed class UpdateSession : IDisposable
 
     private static void ShowRelease(Window owner, ReleaseInfo release)
     {
-        var dialog = new Window { Owner = owner, Title = "Update Available — Piggy - Piggy", Width = 560, Height = 500,
+        var dialog = new Window { Owner = owner, Title = "Update Available — Piggy", Width = 560, Height = 500,
             ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         Ui.ApplyWindowStyle(dialog);
         var panel = Ui.Stack(); panel.Margin = new Thickness(20); dialog.Content = panel;

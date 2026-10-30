@@ -84,7 +84,7 @@ internal static class PortableUpdater
         }
         catch (Exception e)
         {
-            MessageBox.Show("The update could not be installed. Your previous application and documents are preserved.\n\n" + e.Message,"Piggy - Piggy Update",MessageBoxButton.OK,MessageBoxImage.Error);
+            MessageBox.Show("The update could not be installed. Your previous application and documents are preserved.\n\n" + e.Message,"Piggy Update",MessageBoxButton.OK,MessageBoxImage.Error);
             // On failure leave the old app available; do not repeatedly relaunch an unusable path.
         }
         finally { if (safeToClean && job is not null) Cleanup(job.Package.Directory,keepHelper:true); }

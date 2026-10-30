@@ -36,7 +36,6 @@ public sealed partial class MainWindow : Window
         Width = Math.Min(1360, SystemParameters.WorkArea.Width - 48); Height = Math.Min(940, SystemParameters.WorkArea.Height - 48);
         MinWidth = 1000; MinHeight = 640; WindowStartupLocation = WindowStartupLocation.CenterScreen;
         WindowStyle = WindowStyle.SingleBorderWindow; ResizeMode = ResizeMode.CanResize;
-        Icon = Ui.Drawing("savings", Ui.Accent);
         Content = root; root.Children.Add(body);
         CommandBinding Bind(RoutedCommand command, Action action, Func<bool>? enabled = null) { var binding = new CommandBinding(command, (_, _) => action(), (_, e) => e.CanExecute = enabled?.Invoke() ?? true); CommandBindings.Add(binding); return binding; }
         Bind(ApplicationCommands.New, NewDocument); Bind(ApplicationCommands.Open, OpenDocument); Bind(ApplicationCommands.Save, () => Save(), () => hasDocument); Bind(ApplicationCommands.SaveAs, () => Save(true), () => hasDocument);
@@ -48,7 +47,7 @@ public sealed partial class MainWindow : Window
     }
     private void UpdateTitle()
     {
-        Title = hasDocument ? $"{NameOfDocument}{(session.Dirty ? "*" : "")} — Piggy - Piggy" : "Piggy - Piggy";
+        Title = hasDocument ? $"{NameOfDocument}{(session.Dirty ? "*" : "")} — Piggy" : "Piggy";
         status.Text = hasDocument ? $"{session.Document.Transactions.Count} transactions   |   {(session.Dirty ? "Unsaved changes" : session.FilePath is null ? "Not saved yet" : "Saved")} {(session.FilePath is not null ? "  |   " + session.FilePath : "")}" : "";
     }
     private void Render()
@@ -78,22 +77,21 @@ public sealed partial class MainWindow : Window
     }
     private UIElement StartPage()
     {
-        var grid = new Grid(); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.33, GridUnitType.Star) }); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.67, GridUnitType.Star) });
-        var brand = Ui.Stack(); brand.VerticalAlignment = VerticalAlignment.Center; brand.Margin = new Thickness(40); brand.Children.Add(Ui.Icon("savings", 120, Brushes.White)); var title = Ui.Text("Piggy - Piggy", 28, Brushes.White, true); title.TextAlignment = TextAlignment.Center; title.Margin = new Thickness(0,24,0,0); brand.Children.Add(title);
-        var left = new Border { Background = Ui.Accent, Child = brand }; grid.Children.Add(left);
-        var actions = Ui.Stack(); actions.VerticalAlignment = VerticalAlignment.Center; actions.Margin = new Thickness(72,40,56,40); actions.Children.Add(Ui.Text("Let's get started", 28, bold: true));
-        var intro = Ui.Text("Create a new file or open an existing file.", 16, Ui.Muted); intro.Margin = new Thickness(0,12,0,36); actions.Children.Add(intro);
-        foreach (var (label, icon, detail, action) in new (string,string,string,Action)[] { ("New", "document", "Create a new personal finance file.", NewDocument), ("Open", "folder_open", "Open an existing personal finance file.", OpenDocument) })
+        var grid = new Grid { Background = Brushes.White };
+        var actions = Ui.Stack(); actions.HorizontalAlignment = HorizontalAlignment.Center; actions.VerticalAlignment = VerticalAlignment.Center; actions.Margin = new Thickness(24);
+        var logo = new Image { Source = Ui.BrandImage("Brand/piggy-logo.png"), Width = 320, Height = 320, Stretch = Stretch.Uniform };
+        RenderOptions.SetBitmapScalingMode(logo, BitmapScalingMode.HighQuality); AutomationProperties.SetName(logo,"Piggy logo"); actions.Children.Add(logo);
+        foreach (var (label, action) in new (string,Action)[] { ("New",NewDocument), ("Open",OpenDocument) })
         {
-            var button = Ui.Button("", action); button.HorizontalContentAlignment = HorizontalAlignment.Left; button.Padding = new Thickness(12,20,12,20); button.Margin = new Thickness(0,0,0,12); button.BorderThickness = new Thickness(0);
-            var row = Ui.Stack(Orientation.Horizontal); var image = Ui.Icon(icon, 40, Ui.Accent); image.Margin = new Thickness(0,0,24,0); row.Children.Add(image); var text = Ui.Stack(); text.Children.Add(Ui.Text(label, 20, Ui.Accent, true)); var sub = Ui.Text(detail, 14, Ui.Muted); sub.Margin = new Thickness(0,8,0,0); text.Children.Add(sub); row.Children.Add(text); button.Content = row; actions.Children.Add(button);
+            var button = Ui.Button(label,action,label == "New"); button.Width = 240; button.Height = 44; button.FontSize = 16;
+            button.Margin = new Thickness(0,0,0,label == "New" ? 12 : 0); actions.Children.Add(button);
         }
-        Grid.SetColumn(actions, 1); grid.Children.Add(actions); AddUpdateCorner(grid); return grid;
+        grid.Children.Add(actions); AddUpdateCorner(grid); return grid;
     }
     private void AddUpdateCorner(Grid grid)
     {
         var indicator = new UpdateIndicator(this,updates) { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(24) };
-        Grid.SetColumn(indicator,1); grid.Children.Add(indicator);
+        Grid.SetColumn(indicator,Math.Max(0,grid.ColumnDefinitions.Count-1)); grid.Children.Add(indicator);
     }
     private UIElement BuildRibbon()
     {
@@ -329,7 +327,7 @@ public sealed partial class MainWindow : Window
     private void OpenDocument()
     {
         if (!CanLeave()) return;
-        var picker = new OpenFileDialog { Filter = "Piggy - Piggy documents (*.mpb)|*.mpb", Title = "Open Piggy - Piggy Document", CheckFileExists = true };
+        var picker = new OpenFileDialog { Filter = "Piggy documents (*.mpb)|*.mpb", Title = "Open Piggy Document", CheckFileExists = true };
         if (picker.ShowDialog(this) != true) return;
         OpenPath(picker.FileName);
     }
@@ -344,7 +342,7 @@ public sealed partial class MainWindow : Window
         var path = session.FilePath;
         if (saveAs || path is null)
         {
-            var picker = new SaveFileDialog { Filter = "Piggy - Piggy documents (*.mpb)|*.mpb", DefaultExt = ".mpb", AddExtension = true, FileName = NameOfDocument + ".mpb", Title = saveAs ? "Save As" : "Save Piggy - Piggy Document", OverwritePrompt = true };
+            var picker = new SaveFileDialog { Filter = "Piggy documents (*.mpb)|*.mpb", DefaultExt = ".mpb", AddExtension = true, FileName = NameOfDocument + ".mpb", Title = saveAs ? "Save As" : "Save Piggy Document", OverwritePrompt = true };
             if (path is not null) picker.InitialDirectory = Path.GetDirectoryName(path);
             if (picker.ShowDialog(this) != true) return false; path = picker.FileName;
         }

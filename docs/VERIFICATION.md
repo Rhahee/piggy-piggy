@@ -40,6 +40,14 @@ The fixture's transaction identities, dates, amounts, fees and links were checke
 
 This version is **unreleased** at the user's request. No tag or GitHub Release is created, and `update-channel.json` remains unchanged until publication is approved.
 
+## Approved Piggy identity — 0.1.0.1 (unreleased)
+
+The approved magenta-and-white pig / gold coin / **Piggy** logo was copied without visual changes; its SHA-256 was checked against the selected concept. A matching standalone gold coin was generated with a transparent background and packaged into a Windows ICO containing 16, 20, 24, 32, 40, 48, 64, 128 and 256 pixel frames. Windows successfully decoded the 16-pixel frame. Shell icon extraction from the final EXE returned a gold coin icon, and the EXE reported ProductName **Piggy** and FileVersion **0.1.0.1**.
+
+All **433 core checks** and **20 isolated WPF checks** passed after the branding change. The final self-contained EXE was inspected in windowed and maximized states: the full approved logo, New and Open remained centered and visible; version/update controls remained at the bottom right. Open displayed the renamed Piggy document dialog with the coin icon, and Cancel returned to the start page. New opened an empty workspace, and File → Close returned to the logo screen. No real financial document was opened during these checks.
+
+The embedded PNGs use explicit application-assembly resource URIs, so they also load when production windows are instantiated by the separate WPF check executable. Build output remains outside the source directory. The executable/archive naming contract, document format, update channel and published 0.1.0.0 assets are unchanged. See [branding notes](BRANDING.md) for the image-generation prompt and icon conversion command.
+
 ## Limits
 
 Alternate DPI/multiple monitors, taskbars on other screen edges, real-user financial documents, very large production datasets and live update installation require separate coverage. Native window behavior may vary by Windows version, theme and Snap settings. Automated checks do not replace inspection of the final portable EXE.

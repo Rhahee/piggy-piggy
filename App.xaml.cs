@@ -10,7 +10,7 @@ public partial class App : Application
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("en-US");
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("en-US");
         FrameworkElement.LanguageProperty.OverrideMetadata(typeof(FrameworkElement), new FrameworkPropertyMetadata(XmlLanguage.GetLanguage("en-US")));
-        DispatcherUnhandledException += (_, args) => { MessageBox.Show(args.Exception.Message, "Piggy - Piggy", MessageBoxButton.OK, MessageBoxImage.Error); args.Handled = true; };
+        DispatcherUnhandledException += (_, args) => { MessageBox.Show(args.Exception.Message, "Piggy", MessageBoxButton.OK, MessageBoxImage.Error); args.Handled = true; };
         if (e.Args.Length == 2 && e.Args[0] == "--apply-update")
         {
             PortableUpdater.RunHelper(e.Args[1]); Shutdown(); return;

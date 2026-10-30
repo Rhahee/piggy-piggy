@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Data;
 using System.Windows.Automation;
 using System.Windows.Controls.Primitives;
@@ -22,11 +23,22 @@ public sealed class LedgerTooltipConverter : IValueConverter
 }
 public static class Ui
 {
+    private static readonly Dictionary<string, BitmapImage> BrandImages = [];
+    public static ImageSource BrandImage(string path)
+    {
+        if (!BrandImages.TryGetValue(path, out var image))
+        {
+            image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad;
+            image.UriSource = new Uri($"pack://application:,,,/{typeof(Ui).Assembly.GetName().Name};component/Assets/{path}", UriKind.Absolute);
+            image.EndInit(); image.Freeze(); BrandImages[path] = image;
+        }
+        return image;
+    }
     public static ImageSource DropdownArrow => Drawing("chevron_down");
     public static readonly Brush Accent = Brush("#B51B72"), Ink = Brush("#202231"), Muted = Brush("#626777"), Line = Brush("#E2E3EA"), Pale = Brush("#F7E8F1"), Green = Brush("#16864A"), Red = Brush("#D82D3B");
     public static Brush Brush(string hex) => (Brush)new BrushConverter().ConvertFromString(hex)!;
     public static TextBlock Text(string text, double size = 14, Brush? color = null, bool bold = false) => new() { Text = text, FontSize = size, Foreground = color ?? Ink, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap };
-    public static void ApplyWindowStyle(Window window) { window.FontFamily = new FontFamily("Segoe UI"); window.FontSize = 14; window.UseLayoutRounding = true; TextOptions.SetTextFormattingMode(window, TextFormattingMode.Display); }
+    public static void ApplyWindowStyle(Window window) { window.FontFamily = new FontFamily("Segoe UI"); window.FontSize = 14; window.UseLayoutRounding = true; window.Icon = BrandImage("app.png"); TextOptions.SetTextFormattingMode(window, TextFormattingMode.Display); }
     public static StackPanel Stack(Orientation orientation = Orientation.Vertical) => new() { Orientation = orientation };
     public static Border Box(UIElement child, Thickness? padding = null, Brush? background = null) => new() { Child = child, Padding = padding ?? new Thickness(20), Background = background ?? Brushes.White, BorderBrush = Line, BorderThickness = new Thickness(1) };
     public static Button Button(string text, Action action, bool primary = false)

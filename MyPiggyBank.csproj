@@ -7,8 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Piggy - Piggy</AssemblyName>
     <RootNamespace>MyPiggyBank</RootNamespace>
-    <Product>Piggy - Piggy</Product>
-    <Title>Piggy - Piggy</Title>
+    <Product>Piggy</Product>
+    <Title>Piggy</Title>
     <Version>0.1.0.1</Version>
     <UpdateEpoch>3</UpdateEpoch>
     <ApplicationManifest>app.manifest</ApplicationManifest>

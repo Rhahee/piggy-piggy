@@ -15,8 +15,7 @@ public class FormWindow : Window
     public FormWindow(Window owner, string title, string subtitle, string buttonText, double width = 520)
     {
         Ui.ApplyWindowStyle(this);
-        Owner = owner; Title = title + " — Piggy - Piggy"; Width = width; SizeToContent = SizeToContent.Height;
-        Icon = Ui.Drawing("savings", Ui.Accent);
+        Owner = owner; Title = title + " — Piggy"; Width = width; SizeToContent = SizeToContent.Height;
         MaxHeight = Math.Max(500, SystemParameters.WorkArea.Height - 48); ResizeMode = ResizeMode.CanResize;
         WindowStartupLocation = WindowStartupLocation.CenterOwner; MinWidth = 440;
         void KeepFormInWorkArea()
@@ -218,7 +217,7 @@ public sealed class ManagerWindow : Window
     public ManagerWindow(Window owner, DocumentSession session, bool banks, Action changed)
     {
         Ui.ApplyWindowStyle(this);
-        Owner = owner; Title = (banks ? "Bank Accounts" : "Categories") + " — Piggy - Piggy"; Width = 780; Height = 520; MinWidth = 560; MinHeight = 360; WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        Owner = owner; Title = (banks ? "Bank Accounts" : "Categories") + " — Piggy"; Width = 780; Height = 520; MinWidth = 560; MinHeight = 360; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var root = new DockPanel { Margin = new Thickness(24) }; Content = root;
         var heading = Ui.Text(banks ? "Bank Accounts" : "Categories", 22, bold: true); heading.Margin = new Thickness(0,0,0,16); DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
         var grid = new DataGrid();
@@ -255,7 +254,7 @@ public sealed class ConfirmDialog : Window
     private ConfirmDialog(Window owner, string heading, string message)
     {
         Ui.ApplyWindowStyle(this);
-        Owner = owner; Title = "Piggy - Piggy"; Width = 540; SizeToContent = SizeToContent.Height; MaxHeight = SystemParameters.WorkArea.Height - 40; ResizeMode = ResizeMode.NoResize; WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        Owner = owner; Title = "Piggy"; Width = 540; SizeToContent = SizeToContent.Height; MaxHeight = SystemParameters.WorkArea.Height - 40; ResizeMode = ResizeMode.NoResize; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var stack = Ui.Stack(); stack.Margin = new Thickness(20); Content = stack;
         stack.Children.Add(Ui.Text(heading, 20, bold: true)); var text = Ui.Text(message, 14, Ui.Muted); text.Margin = new Thickness(0,16,0,24); stack.Children.Add(text);
         Buttons.HorizontalAlignment = HorizontalAlignment.Right; stack.Children.Add(Buttons);
