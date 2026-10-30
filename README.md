@@ -1,8 +1,12 @@
 # Piggy - Piggy
 
-**0.1.0.1 — Native Windows Window Frame**
+**Versi unduhan: [0.1.0.0 — Initial Development Baseline](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.0.0)**
+
+**Versi pengembangan: 0.1.0.1 — Native Windows Window Frame**
 
 **Status: Unreleased.** Versi ini sedang disiapkan pada kode sumber dan build lokal. Tag, GitHub Release, dan promosi kanal updater menunggu persetujuan publikasi.
+
+Status Unreleased di atas berlaku untuk **0.1.0.1**. Versi **0.1.0.0** sudah dipublikasikan beserta ZIP dan checksum; lihat [catatan rilis baseline](docs/releases/0.1.0.0.md).
 
 A portable, offline Windows application for personal finances across multiple bank accounts. English interface, magenta Office-style ribbon, Rupiah amounts (**Rp 1,250,000.00**), and dates in **MM/DD/YYYY**.
 

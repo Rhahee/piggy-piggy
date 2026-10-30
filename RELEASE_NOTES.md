@@ -2,6 +2,8 @@
 
 **Status: Unreleased.** Source and local build only. No release tag or GitHub Release has been created for this version, and `update-channel.json` has not been promoted. Publication requires separate approval.
 
+The published baseline is [0.1.0.0](docs/releases/0.1.0.0.md), available on [GitHub Releases](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.0.0). Its package retains the baseline custom title bar.
+
 **Change type: Minor Fix.** This update replaces the main window's custom title bar and frame with the standard Windows window frame.
 
 ## What changed
