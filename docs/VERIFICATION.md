@@ -64,6 +64,8 @@ The exact packaged EXE reported FileVersion **0.1.0.1**, ProductName **Piggy**, 
 
 Publication used the verified draft assets without replacement; public GitHub Latest identifies **app-v0.1.0.1**. The channel is promoted only after publication. Executable/archive names, update epoch 3 and document format 9 remain stable. A complete in-place replacement/restart is not part of this release check.
 
+After channel promotion, the production `ReleaseChecker.CheckChannelAsync` returned **Available → 0.1.0.1** for installed **0.1.0.0**, including the correct checksum URL, and **UpToDate** for installed **0.1.0.1**. Separate public requests confirmed generation-3 channel metadata and the downloadable matching checksum.
+
 ## Limits
 
 Alternate DPI/multiple monitors, taskbars on other screen edges, real-user financial documents, very large production datasets and live update installation require separate coverage. Native window behavior may vary by Windows version, theme and Snap settings. Automated checks do not replace inspection of the final portable EXE.
