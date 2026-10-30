@@ -1,8 +1,8 @@
-# Verification — 0.1.0.0
+# Verification — 0.1.0.1
 
 ## Baseline scope
 
-The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The version is **0.1.0.0**, update epoch **3**, and document format **9**.
+The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.1.0.1**, update epoch **3**, and document format **9**.
 
 ## Automated checks
 
@@ -20,8 +20,18 @@ On **2026-10-30**, all **433 core checks** and **20 isolated WPF checks** passed
 
 Release and checksum requests are restricted to the new repository. Automated updater cases use simulated responses; a complete live update installation requires published releases in this repository.
 
+## Native window update — 0.1.0.1 (unreleased)
+
+On **2026-10-30**, all **433 core checks** and **20 isolated WPF checks** passed after switching the main window to standard Windows chrome. The self-contained Windows x64 EXE built successfully with FileVersion **0.1.0.1**. The source directory's build output remains separate from the checked-in code.
+
+Native UI inspection confirmed the standard system title bar and window menu, maximize/restore on the current screen, the 32 × 32 Save control in the menu row, and the displayed version. A fictional format-9 document opened with eight transactions. Changing its report period displayed the unsaved **\*** marker; clicking the toolbar Save cleared it. A second period change triggered the existing Save / Don't Save / Cancel prompt when closing; Cancel preserved the open document, and Ctrl+S saved it. A final close exited normally.
+
+The fixture's transaction identities, dates, amounts, fees and links were checked after saving and remained unchanged. No real financial document was used. Full Snap layout selection, interactive resize across DPI settings, and alternate monitor/taskbar configurations remain outside this check.
+
+This version is **unreleased** at the user's request. No tag or GitHub Release is created, and `update-channel.json` remains unchanged until publication is approved.
+
 ## Limits
 
-Alternate DPI/multiple monitors, real-user financial documents, very large production datasets and live update installation are not re-exercised by a branding change. Automated checks do not replace inspection of the final portable EXE.
+Alternate DPI/multiple monitors, taskbars on other screen edges, real-user financial documents, very large production datasets and live update installation require separate coverage. Native window behavior may vary by Windows version, theme and Snap settings. Automated checks do not replace inspection of the final portable EXE.
 
 Screenshots, fictional documents and local test artifacts remain outside Git. The original project and private financial documents remain in their existing locations.

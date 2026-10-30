@@ -2,10 +2,10 @@ using System.ComponentModel;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shell;
 using Microsoft.Win32;
 using MyPiggyBank.Core;
 
@@ -17,7 +17,6 @@ public sealed partial class MainWindow : Window
     private readonly DockPanel root = new();
     private readonly ContentControl body = new();
     private readonly UpdateSession updates = new();
-    private readonly TextBlock caption = Ui.Text("Piggy - Piggy");
     private TextBlock status = Ui.Text("", 12, Ui.Muted);
     private bool hasDocument, backstage, updating, preparingUpdate;
     private string page = "Overview", ribbonTab = "Home", search = "", typeFilter = "All types",debtTrackingFilter="All transactions";
@@ -29,7 +28,6 @@ public sealed partial class MainWindow : Window
     private DateRange SelectedRange => SelectedPeriod.Range(session.Document.PaySchedule);
     private DataGrid? ledger;
     private Button? editButton, deleteButton;
-    private Button? quickSave;
     private TextBox? searchBox;
     private string NameOfDocument => session.FilePath is null ? "Untitled" : Path.GetFileNameWithoutExtension(session.FilePath);
     public MainWindow()
@@ -37,12 +35,9 @@ public sealed partial class MainWindow : Window
         Ui.ApplyWindowStyle(this);
         Width = Math.Min(1360, SystemParameters.WorkArea.Width - 48); Height = Math.Min(940, SystemParameters.WorkArea.Height - 48);
         MinWidth = 1000; MinHeight = 640; WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.CanResize;
-        WindowChrome.SetWindowChrome(this, new WindowChrome { CaptionHeight = 40, ResizeBorderThickness = new Thickness(6), CornerRadius = new CornerRadius(0), GlassFrameThickness = new Thickness(0), UseAeroCaptionButtons = false });
-        WindowBounds.Attach(this);
+        WindowStyle = WindowStyle.SingleBorderWindow; ResizeMode = ResizeMode.CanResize;
         Icon = Ui.Drawing("savings", Ui.Accent);
-        var frame = new Border { BorderBrush = Ui.Line, BorderThickness = new Thickness(1), Child = root }; Content = frame;
-        var title = BuildTitleBar(); DockPanel.SetDock(title, Dock.Top); root.Children.Add(title); root.Children.Add(body);
+        Content = root; root.Children.Add(body);
         CommandBinding Bind(RoutedCommand command, Action action, Func<bool>? enabled = null) { var binding = new CommandBinding(command, (_, _) => action(), (_, e) => e.CanExecute = enabled?.Invoke() ?? true); CommandBindings.Add(binding); return binding; }
         Bind(ApplicationCommands.New, NewDocument); Bind(ApplicationCommands.Open, OpenDocument); Bind(ApplicationCommands.Save, () => Save(), () => hasDocument); Bind(ApplicationCommands.SaveAs, () => Save(true), () => hasDocument);
         InputBindings.Add(new KeyBinding(ApplicationCommands.SaveAs, Key.S, ModifierKeys.Control | ModifierKeys.Shift));
@@ -51,25 +46,9 @@ public sealed partial class MainWindow : Window
         Closed += (_,_) => updates.Dispose();
         Render();
     }
-    private UIElement BuildTitleBar()
-    {
-        var panel = new DockPanel { Height = 40, Background = Ui.Brush("#F8ECF3"), LastChildFill = true };
-        var controls = Ui.Stack(Orientation.Horizontal);
-        var minimize = Ui.Button("", () => SystemCommands.MinimizeWindow(this)); minimize.Content = Ui.Icon("subtract", 16); minimize.ToolTip = "Minimize";
-        var maximize = Ui.Button("", () => { if (WindowState == WindowState.Maximized) SystemCommands.RestoreWindow(this); else SystemCommands.MaximizeWindow(this); }); maximize.Content = Ui.Icon("square", 16); maximize.ToolTip = "Maximize / Restore";
-        var close = Ui.Button("", Close); close.Content = Ui.Icon("dismiss", 18); close.ToolTip = "Close";
-        foreach (var b in new[] { minimize, maximize, close }) { b.Margin = new Thickness(0); b.Width = 46; b.Height = 40; b.MinHeight = 0; b.Padding = new Thickness(0); b.Background = Brushes.Transparent; b.BorderThickness = new Thickness(0); WindowChrome.SetIsHitTestVisibleInChrome(b, true); controls.Children.Add(b); }
-        DockPanel.SetDock(controls, Dock.Right); panel.Children.Add(controls);
-        var pig = Ui.Icon("savings", 24, Ui.Accent); pig.Margin = new Thickness(12,0,8,0); DockPanel.SetDock(pig, Dock.Left); panel.Children.Add(pig);
-        var titleAndSave = new Grid(); titleAndSave.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, MaxWidth = 480 }); titleAndSave.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); titleAndSave.ColumnDefinitions.Add(new ColumnDefinition());
-        caption.FontSize = 13.333333; caption.TextWrapping = TextWrapping.NoWrap; caption.TextTrimming = TextTrimming.CharacterEllipsis; caption.Margin = new Thickness(0,0,8,0); titleAndSave.Children.Add(caption);
-        var save = Ui.SquareIconButton("save", () => { if (hasDocument) Save(); }, "Save (Ctrl+S)",32,Ui.Accent); quickSave = save; WindowChrome.SetIsHitTestVisibleInChrome(save, true); Grid.SetColumn(save,1); titleAndSave.Children.Add(save); panel.Children.Add(titleAndSave); return panel;
-    }
     private void UpdateTitle()
     {
         Title = hasDocument ? $"{NameOfDocument}{(session.Dirty ? "*" : "")} — Piggy - Piggy" : "Piggy - Piggy";
-        caption.Text = Title;
-        if (quickSave is not null) quickSave.Visibility = hasDocument ? Visibility.Visible : Visibility.Collapsed;
         status.Text = hasDocument ? $"{session.Document.Transactions.Count} transactions   |   {(session.Dirty ? "Unsaved changes" : session.FilePath is null ? "Not saved yet" : "Saved")} {(session.FilePath is not null ? "  |   " + session.FilePath : "")}" : "";
     }
     private void Render()
@@ -119,7 +98,11 @@ public sealed partial class MainWindow : Window
     private UIElement BuildRibbon()
     {
         var stack = Ui.Stack(); stack.Background = Ui.Brush("#F5F4F7"); var tabs = Ui.Stack(Orientation.Horizontal);
-        foreach (var label in new[] { "File", "Home", "Data", "View" }) { var name = label; var b = Ui.Button(label, () => { if (name == "File") backstage = true; else ribbonTab = name; Render(); }); b.Margin = new Thickness(0); b.Padding = new Thickness(20,0,20,0); b.Height = 32; b.MinHeight = 0; b.FontSize = 12; Ui.SelectNavigation(b,ribbonTab == name); tabs.Children.Add(b); } stack.Children.Add(tabs);
+        foreach (var label in new[] { "File", "Home", "Data", "View" }) { var name = label; var b = Ui.Button(label, () => { if (name == "File") backstage = true; else ribbonTab = name; Render(); }); b.Margin = new Thickness(0); b.Padding = new Thickness(20,0,20,0); b.Height = 32; b.MinHeight = 0; b.FontSize = 12; Ui.SelectNavigation(b,ribbonTab == name); tabs.Children.Add(b); }
+        var tabRow = new DockPanel { Height = 32 };
+        var save = Ui.SquareIconButton("save", () => Save(), "Save (Ctrl+S)", 32, Ui.Accent);
+        save.Margin = new Thickness(0,0,4,0); AutomationProperties.SetName(save,"Save");
+        DockPanel.SetDock(save,Dock.Right); tabRow.Children.Add(save); tabRow.Children.Add(tabs); stack.Children.Add(tabRow);
         var groups = Ui.Stack(Orientation.Horizontal);
         void Group(string label, params Button[] buttons)
         {

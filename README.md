@@ -1,10 +1,18 @@
 # Piggy - Piggy
 
-**0.1.0.0 — Initial Development Baseline**
+**0.1.0.1 — Native Windows Window Frame**
+
+**Status: Unreleased.** Versi ini sedang disiapkan pada kode sumber dan build lokal. Tag, GitHub Release, dan promosi kanal updater menunggu persetujuan publikasi.
 
 A portable, offline Windows application for personal finances across multiple bank accounts. English interface, magenta Office-style ribbon, Rupiah amounts (**Rp 1,250,000.00**), and dates in **MM/DD/YYYY**.
 
 [Repository](https://github.com/Rhahee/piggy-piggy) · [Releases](https://github.com/Rhahee/piggy-piggy/releases) · [Verification](docs/VERIFICATION.md) · [Release guide](docs/RELEASING.md)
+
+## Update 0.1.0.1 — Minor Fix
+
+Jendela utama sekarang memakai title bar, bingkai, dan tombol minimize/maximize/close bawaan Windows. Resize, maximize, restore, dan Snap ditangani OS; ketersediaan Snap mengikuti versi serta pengaturan Windows. Tombol **Save** berada di sisi kanan baris **File / Home / Data / View**, dengan tooltip **Save (Ctrl+S)**. Nama dokumen dan tanda **\*** untuk perubahan yang belum disimpan tetap tampil di title bar.
+
+Tema isi aplikasi tetap memakai tampilan ribbon magenta. Dokumen `.mpb`, perhitungan keuangan, dan proses Save manual tetap kompatibel. Lihat [catatan update lengkap](RELEASE_NOTES.md).
 
 ## Menjalankan
 
@@ -16,7 +24,7 @@ A portable, offline Windows application for personal finances across multiple ba
 
 ## Memakai dokumen yang sudah ada
 
-Jika sudah memiliki dokumen keuangan dari build sebelumnya, simpan perubahan dengan **Save**, tutup aplikasi tersebut, ekstrak paket 0.1.0.0 ke folder baru, lalu **Open** dokumen **.mpb** yang sama.
+Jika sudah memiliki dokumen keuangan dari build sebelumnya, simpan perubahan dengan **Save**, tutup aplikasi tersebut, ekstrak paket versi baru ke folder pilihanmu, lalu **Open** dokumen **.mpb** yang sama.
 
 Format dokumen saat ini **9**, dan format 1–8 tetap bisa dibuka tanpa menulis ulang berkas asal sampai Save. Pembaruan setelah baseline 0.1.0.0 tersedia melalui tombol update aplikasi.
 
