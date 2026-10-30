@@ -54,6 +54,16 @@ On **2026-10-30**, all **433 core checks** and **40 isolated WPF checks** passed
 
 Native EXE inspection confirmed consistent form spacing and the Category validation indicator on an empty Expense submission. A fictional eight-transaction format-9 document opened with the expected balance and Saved state; the long path was visibly truncated, while the status control exposed the complete wrapping tooltip text. The invalid transaction was canceled. The fixture was not saved. The model, financial calculations, document format and updater ordering were not changed by this polish.
 
+## Published update — 0.1.0.1
+
+On **2026-10-30**, [app-v0.1.0.1](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.0.1) was published from **0e2d0597330da9c387598c8cb433586fd1e275a7**. Both main and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/41060560645) succeeded; tag logs confirmed **433 core checks and 40 isolated WPF checks**. The downloaded draft ZIP matched its checksum asset and GitHub digest:
+
+`add0bf8184be64c5f4bc8a384e23a9a57ce96a997e0230ea05657c3ad8982cd7`
+
+The exact packaged EXE reported FileVersion **0.1.0.1**, ProductName **Piggy**, and the tagged source commit in ProductVersion. Its SHA-256 was `800510f305e02793865ace27043ea85f90afb0c76bad6bd3fce5df1afd46df47`. Native inspection confirmed the approved centered logo, New/Open controls, gold coin icon, native title bar, and displayed version. A fictional format-9 document opened with eight transactions and the expected balance. Hovering over its truncated status path displayed a wrapping tooltip containing the full 238-character location. Closing left the fixture SHA-256 unchanged.
+
+Publication used the verified draft assets without replacement; public GitHub Latest identifies **app-v0.1.0.1**. The channel is promoted only after publication. Executable/archive names, update epoch 3 and document format 9 remain stable. A complete in-place replacement/restart is not part of this release check.
+
 ## Limits
 
 Alternate DPI/multiple monitors, taskbars on other screen edges, real-user financial documents, very large production datasets and live update installation require separate coverage. Native window behavior may vary by Windows version, theme and Snap settings. Automated checks do not replace inspection of the final portable EXE.
