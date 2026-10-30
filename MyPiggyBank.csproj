@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Piggy - Piggy</AssemblyName>
+    <RootNamespace>MyPiggyBank</RootNamespace>
+    <Product>Piggy - Piggy</Product>
+    <Title>Piggy - Piggy</Title>
+    <Version>0.1.0.0</Version>
+    <UpdateEpoch>3</UpdateEpoch>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/app.ico</ApplicationIcon>
+    <DefaultItemExcludes>$(DefaultItemExcludes);qa/**;dist/**</DefaultItemExcludes>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="UpdateEpoch" Value="$(UpdateEpoch)" />
+    <Compile Remove="Core/**/*.cs;Tests/**/*.cs;qa/**/*.cs" />
+    <ProjectReference Include="Core/MyPiggyBank.Core.csproj" />
+    <Resource Include="Assets/**/*" />
+  </ItemGroup>
+</Project>

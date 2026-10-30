@@ -1,0 +1,16 @@
+bin/
+obj/
+dist/
+*.mpb
+*.tmp
+qa/
+design-qa.md
+.vs/
+.idea/
+*.user
+*.suo
+.env
+.env.*
+*.pfx
+*.p12
+*.key
