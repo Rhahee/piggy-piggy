@@ -12,6 +12,7 @@ public class FormWindow : Window
     protected readonly StackPanel Fields = Ui.Stack();
     protected readonly TextBlock Error = Ui.Text("", 13, Ui.Red);
     protected readonly Button Submit;
+    private readonly List<(FrameworkElement Input, string Label)> requiredFields = [];
     public FormWindow(Window owner, string title, string subtitle, string buttonText, double width = 520)
     {
         Ui.ApplyWindowStyle(this);
@@ -45,14 +46,27 @@ public class FormWindow : Window
     }
     protected void Field(string label, UIElement input)
     {
-        var row = new Grid { Margin = new Thickness(0,6,0,6) };
+        var row = new Grid { Margin = new Thickness(0,8,0,8) };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(124) }); row.ColumnDefinitions.Add(new ColumnDefinition());
         var text = Ui.Text(label, 13, Ui.Ink); text.Margin = new Thickness(0,0,12,0); row.Children.Add(text);
         Grid.SetColumn(input,1); row.Children.Add(input); Fields.Children.Add(row);
+        if (label.Contains('*') && FormValidation.Input(input) is { } field)
+            requiredFields.Add((field, label.Replace("*", "").Replace('\n',' ').Trim()));
     }
     protected void Attempt(Action action)
     {
-        try { action(); } catch (Exception e) when (e is InvalidDataException or FormatException or OverflowException) { Error.Text = e.Message; }
+        try
+        {
+            foreach (var (input, label) in requiredFields.Where(f => f.Input.IsVisible && f.Input.IsEnabled))
+            {
+                // Money parsing decides whether a blank means zero (opening balance/fees) or is required.
+                var present = input switch { MoneyTextBox => true, TextBox text => !string.IsNullOrWhiteSpace(text.Text), Selector selector => selector.SelectedItem is not null, _ => true };
+                FormValidation.Require(present,input,label + " is required.");
+            }
+            action();
+        }
+        catch (Exception e) when (e is InvalidDataException or FormatException or OverflowException)
+        { Error.Text = e.Message; FormValidation.Focus(e); }
     }
     public void AddFields(UIElement element) => Fields.Children.Add(element);
     public void OnSubmit(Action action) => Submit.Click += (_, _) => Attempt(() => { action(); DialogResult = true; });
@@ -69,10 +83,7 @@ public class FormWindow : Window
         calendar.SelectedDatesChanged += (_, _) => { if (calendar.SelectedDate is DateTime date) { input.Text = Display.Date(DateOnly.FromDateTime(date)); popup.IsOpen = false; } };
         DockPanel.SetDock(button, Dock.Right); row.Children.Add(button); row.Children.Add(input); return row;
     }
-    protected static DateOnly ReadDate(TextBox input)
-    {
-        FinanceDocument.Require(DateOnly.TryParseExact(input.Text.Trim(), "MM/dd/yyyy", Display.Culture, System.Globalization.DateTimeStyles.None, out var date), "Enter a valid date in MM/DD/YYYY format."); return date;
-    }
+    protected static DateOnly ReadDate(TextBox input) => FormValidation.Date(input);
     protected static ComboBox Combo(IEnumerable<object> items, string display = "Name") => new() { ItemsSource = items, DisplayMemberPath = display };
 }
 
@@ -87,8 +98,11 @@ public sealed class BankDialog : FormWindow
         Field("Bank Name *", name); DateField("Opening Balance\nDate *", date); Field("Opening Balance\n(Rp) *", balance);
         var note = Ui.Text("The opening balance is the balance before the first transaction on this date.", 12, Ui.Muted); note.Margin = new Thickness(0,12,0,0); Fields.Children.Add(note);
         Submit.Click += (_, _) => Attempt(() => {
-            var bank = new Bank(existing?.Id ?? Guid.NewGuid(), name.Text.Trim(), ReadDate(date), MoneyEditing.Read(balance.Text, emptyAsZero: true));
-            var copy = doc.Copy(); copy.Banks.RemoveAll(b => b.Id == bank.Id); copy.Banks.Add(bank); copy.Validate();
+            FormValidation.Require(!doc.Banks.Any(b => b.Id != existing?.Id && string.Equals(b.Name,name.Text.Trim(),StringComparison.OrdinalIgnoreCase)),name,"A bank with this name already exists.");
+            var bank = new Bank(existing?.Id ?? Guid.NewGuid(), name.Text.Trim(), ReadDate(date), FormValidation.Money(balance, emptyAsZero: true));
+            FormValidation.Require(bank.OpeningDate != default,date,"Enter a valid opening balance date.");
+            FormValidation.Require(doc.Transactions.All(t => (t.BankId != bank.Id && t.ToBankId != bank.Id) || t.Date >= bank.OpeningDate),date,"Opening balance date cannot be after this bank's recorded transactions.");
+            var copy = doc.Copy(); copy.Banks.RemoveAll(b => b.Id == bank.Id); copy.Banks.Add(bank); FormValidation.At(balance,copy.Validate);
             if (copy.HasNegativeHistory(bank.Id) && !ConfirmDialog.Confirm(this, "Negative balance", "This opening balance creates a negative balance in this bank's history. Continue?", "Continue")) return;
             Result = bank; DialogResult = true;
         });
@@ -106,7 +120,7 @@ public sealed class CategoryDialog : FormWindow
         Field("Category Name *", name); Field("Type *", type);
         Submit.Click += (_, _) => Attempt(() => {
             var category = new Category(existing?.Id ?? Guid.NewGuid(), name.Text.Trim(), (CategoryKind)type.SelectedItem);
-            var copy = doc.Copy(); copy.Categories.RemoveAll(c => c.Id == category.Id); copy.Categories.Add(category); copy.Validate(); Result = category; DialogResult = true;
+            var copy = doc.Copy(); copy.Categories.RemoveAll(c => c.Id == category.Id); copy.Categories.Add(category); FormValidation.At(name,copy.Validate); Result = category; DialogResult = true;
         });
         Loaded += (_, _) => name.Focus();
     }
@@ -158,7 +172,7 @@ public sealed class TransactionDialog : FormWindow
         {
             try
             {
-                var a = MoneyEditing.Read(amount.Text, emptyAsZero: true); var f = MoneyEditing.Read(fee.Text, emptyAsZero: true);
+                var a = FormValidation.Money(amount, emptyAsZero: true); var f = FormValidation.Money(fee, emptyAsZero: true);
                 if (kind == TransactionKind.Transfer) summary.Text = $"From bank: −{Display.Money(a + f)}\nTo bank: +{Display.Money(a)}";
                 else if (kind == TransactionKind.Expense) summary.Text = $"Expense: {Display.Money(a)}\nAdmin fee: {Display.Money(f)}\nTotal deducted: {Display.Money(a + f)}";
                 else
@@ -174,7 +188,7 @@ public sealed class TransactionDialog : FormWindow
         Field("Description", description);
         DebtTrackingEditor? debtEditor=null;
         if(kind!=TransactionKind.Transfer){
-            debtEditor=new DebtTrackingEditor(session,kind,existing,()=>ReadDate(date),()=>(bank.SelectedItem as Bank)?.Id,()=>MoneyEditing.Read(amount.Text,true),()=>MoneyEditing.Read(fee.Text,true),()=>incomeBasis.SelectedIndex==1,()=>Error.Text="",debtPreset,trackNewDebt);
+            debtEditor=new DebtTrackingEditor(session,kind,existing,()=>ReadDate(date),()=>(bank.SelectedItem as Bank)?.Id,()=>FormValidation.Money(amount,true),()=>FormValidation.Money(fee,true),()=>incomeBasis.SelectedIndex==1,()=>Error.Text="",debtPreset,trackNewDebt);
             Fields.Children.Add(Ui.Box(debtEditor,new Thickness(12)));
             date.TextChanged+=(_,_)=>debtEditor.Refresh();amount.TextChanged+=(_,_)=>debtEditor.Refresh();fee.TextChanged+=(_,_)=>debtEditor.Refresh();incomeBasis.SelectionChanged+=(_,_)=>debtEditor.Refresh();
             bank.SelectionChanged+=(_,_)=>debtEditor.Refresh();
@@ -186,7 +200,7 @@ public sealed class TransactionDialog : FormWindow
             foreach (var field in originalFields) details.Children.Add(field);
             var columns = new Grid(); columns.ColumnDefinitions.Add(new ColumnDefinition()); columns.ColumnDefinitions.Add(new ColumnDefinition());
             details.Margin = new Thickness(0,0,24,0); columns.Children.Add(details);
-            allocations = new AllocationEditor(this,session,() => MoneyEditing.Read(amount.Text,emptyAsZero:true),()=>(bank.SelectedItem as Bank)?.Id,existing?.Allocations,existing is null?debtPreset:null,existing is null&&trackNewDebt);
+            allocations = new AllocationEditor(this,session,() => FormValidation.Money(amount,emptyAsZero:true),()=>(bank.SelectedItem as Bank)?.Id,existing?.Allocations,existing is null?debtPreset:null,existing is null&&trackNewDebt);
             var right = new Border { BorderBrush = Ui.Line, BorderThickness = new Thickness(1,0,0,0), Padding = new Thickness(24,0,0,0), Child = allocations }; Grid.SetColumn(right,1); columns.Children.Add(right); Fields.Children.Add(columns);
             amount.TextChanged += (_, _) => allocations.UpdateTotals();
             bank.SelectionChanged+=(_,_)=>allocations.UpdateTotals();
@@ -194,14 +208,39 @@ public sealed class TransactionDialog : FormWindow
         summary.Margin = new Thickness(0,8,0,0); Fields.Children.Add(Ui.Box(summary, new Thickness(12), Ui.Brush("#F6F6F9"))); var feeHint = Ui.Text("Fees are recorded automatically as a linked Admin Fee expense.",12,Ui.Muted); feeHint.Margin = new Thickness(0,12,0,0); Fields.Children.Add(feeHint);
         Submit.Click += (_, _) => Attempt(() => {
             var sourceBank = bank.SelectedItem as Bank;
-            FinanceDocument.Require(sourceBank is not null, "Choose a bank.");
-            var parsedFee = MoneyEditing.Read(fee.Text, emptyAsZero: true);
+            FormValidation.Require(sourceBank is not null,bank,"Choose a bank.");
+            var transactionDate = ReadDate(date);
+            FormValidation.Require(transactionDate != default && transactionDate >= sourceBank!.OpeningDate,date,"Transaction date cannot be before the bank's opening balance date.");
+            if (kind == TransactionKind.Transfer)
+            {
+                FormValidation.Require(target.SelectedItem is Bank destination && destination.Id != sourceBank.Id,target,"Choose two different banks for a transfer.");
+                FormValidation.Require(transactionDate >= ((Bank)target.SelectedItem).OpeningDate,date,"Transfer date cannot be before either bank's opening balance date.");
+            }
+            var parsedFee = FormValidation.Money(fee, emptyAsZero: true);
+            var parsedAmount = FormValidation.Money(amount);
+            FormValidation.Require(parsedAmount > 0,amount,"Amount must be greater than zero and have at most two decimal places.");
+            FormValidation.Require(parsedFee >= 0,fee,"Admin fee must be zero or greater, with at most two decimals.");
+            if (kind == TransactionKind.Income)
+                FormValidation.Require(FinanceDocument.IsMoney(incomeBasis.SelectedIndex == 1 ? parsedAmount + parsedFee : parsedAmount) && (incomeBasis.SelectedIndex == 1 || parsedFee <= parsedAmount),fee,"Income before fee must cover the admin fee and stay within the supported amount range.");
             var tracking=debtEditor?.Read()??new DebtTrackingResult();
             var allocated=allocations?.Read();
-            var item = new Transaction(existing?.Id ?? Guid.NewGuid(), ReadDate(date), kind, sourceBank.Id,
+            if(tracking.DebtId is not null||tracking.SelfPayment is not null||allocated?.Allocations.Any(a=>a.SelfDebtId is not null)==true)
+                FormValidation.Require(transactionDate<=DateOnly.FromDateTime(DateTime.Today),date,"Debt transactions must be today or earlier.");
+            var directDebt=tracking.NewDebt??doc.Debts.FirstOrDefault(d=>d.Id==(tracking.DebtId??tracking.SelfPayment?.DebtId));
+            if(directDebt is {Kind:DebtKind.Self})
+                FormValidation.Require(sourceBank.Id==directDebt.SelfBankId,bank,$"Use the original account for {directDebt.Name}: {doc.BankName(directDebt.SelfBankId!.Value)}.");
+            foreach(var allocation in allocated?.Allocations??[])
+            {
+                var debt=doc.Debts.Concat(allocated?.NewDebts??[]).FirstOrDefault(d=>d.Id==allocation.SelfDebtId);
+                if(debt is not {Kind:DebtKind.Self})continue;
+                var borrowed=allocation.DebtAction==SelfDebtAction.Borrow;
+                FormValidation.Require((borrowed?sourceBank.Id:(target.SelectedItem as Bank)?.Id)==debt.SelfBankId,borrowed?bank:target,$"{(borrowed?"Borrow from":"Return funds to")} the original account for {debt.Name}: {doc.BankName(debt.SelfBankId!.Value)}.");
+            }
+            if(allocated is {Allocations.Count:>0})FormValidation.Require(allocated.Value.Allocations.Sum(a=>a.Amount)==parsedAmount,amount,"Allocated total must equal the transfer amount, excluding the admin fee.");
+            var item = new Transaction(existing?.Id ?? Guid.NewGuid(), transactionDate, kind, sourceBank.Id,
                 kind == TransactionKind.Transfer ? (target.SelectedItem as Bank)?.Id : null,
                 kind == TransactionKind.Transfer ? null : (categories.SelectedItem as Category)?.Id,
-                MoneyEditing.Read(amount.Text), parsedFee, null, description.Text.Trim(), allocated?.Allocations, kind == TransactionKind.Income ? (IncomeAmountBasis)incomeBasis.SelectedIndex : IncomeAmountBasis.BeforeFee,tracking.DebtId,tracking.SelfPayment);
+                parsedAmount, parsedFee, null, description.Text.Trim(), allocated?.Allocations, kind == TransactionKind.Income ? (IncomeAmountBasis)incomeBasis.SelectedIndex : IncomeAmountBasis.BeforeFee,tracking.DebtId,tracking.SelfPayment);
             var copy = DebtService.SaveTransaction(session.Document,item,tracking.NewDebt,allocated?.NewDebts);
             var affected = new HashSet<Guid> { item.BankId }; if (item.ToBankId is Guid dest) affected.Add(dest);
             if (existing is not null) { affected.Add(existing.BankId); if (existing.ToBankId is Guid oldTarget) affected.Add(oldTarget); }

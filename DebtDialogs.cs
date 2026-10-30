@@ -62,7 +62,7 @@ internal sealed class DebtTrackingEditor : StackPanel
         hint.Text=Self?"Return funds to the original account. Only the marked repayment reduces Self Debt; admin fees are separate. Reports and bank movements stay unchanged.":"Admin Fee is separate from principal. Income/Expenses reports stay unchanged. Reopen Paid debts before adding borrowing.";
         if(track.IsChecked!=true)return;
         try{
-            var date=readDate();var amount=readAmount();var principal=IsRepayment?MoneyEditing.Read(repayment.Text,true):kind==TransactionKind.Income&&afterFee()?amount+readFee():amount;
+            var date=readDate();var amount=readAmount();var principal=IsRepayment?FormValidation.Money(repayment,true):kind==TransactionKind.Income&&afterFee()?amount+readFee():amount;
             var adds=Self?kind==TransactionKind.Expense:kind==TransactionKind.Income;
             if(choice.SelectedItem is not Choice selected){preview.Text="Choose the debt being paid.";return;}
             if(selected.Id is not Guid id){preview.Text=(Self?"Self Debt principal: ":"Borrowed principal: ")+Display.Money(principal)+(Self&&readBank() is Guid bank?"\nReturn to: "+session.Document.BankName(bank):"");return;}
@@ -74,10 +74,18 @@ internal sealed class DebtTrackingEditor : StackPanel
     public DebtTrackingResult Read()
     {
         if(track.IsChecked!=true)return new();
-        FinanceDocument.Require(choice.SelectedItem is Choice,"Choose a debt.");var selected=(Choice)choice.SelectedItem;
-        if(selected.Id is Guid id)return IsRepayment?new(SelfPayment:new(id,MoneyEditing.Read(repayment.Text))):new(DebtId:id);
-        FinanceDocument.Require((Self&&kind==TransactionKind.Expense)||(!Self&&kind==TransactionKind.Income),"Choose an existing debt for a payment.");
-        DateOnly? date=null;if(!string.IsNullOrWhiteSpace(due.Text)){FinanceDocument.Require(DateOnly.TryParseExact(due.Text.Trim(),"MM/dd/yyyy",Display.Culture,System.Globalization.DateTimeStyles.None,out var parsed),"Enter a valid due date in MM/DD/YYYY format.");date=parsed;}
+        FormValidation.Require(choice.SelectedItem is Choice,choice,"Choose a debt.");var selected=(Choice)choice.SelectedItem;
+        if(selected.Id is Guid id)
+        {
+            if(!IsRepayment)return new(DebtId:id);
+            var principal=FormValidation.Money(repayment);
+            FormValidation.Require(principal>0&&principal<=(afterFee()?readAmount():readAmount()-readFee()),repayment,"Self Debt repayment must be positive and cannot exceed net Income after fees.");
+            return new(SelfPayment:new(id,principal));
+        }
+        FormValidation.Require((Self&&kind==TransactionKind.Expense)||(!Self&&kind==TransactionKind.Income),choice,"Choose an existing debt for a payment.");
+        FormValidation.Require(!string.IsNullOrWhiteSpace(name.Text),name,"Enter a debt name (up to 100 characters).");
+        if(!Self)FormValidation.Require(!string.IsNullOrWhiteSpace(lender.Text),lender,"Enter the lender name.");
+        var date=FormValidation.OptionalDate(due);
         var debt=new Debt(Guid.NewGuid(),name.Text.Trim(),Self?"":lender.Text.Trim(),date,Kind:Self?DebtKind.Self:DebtKind.External,SelfBankId:Self?readBank():null);return new(debt.Id,debt);
     }
 }
@@ -88,6 +96,6 @@ internal sealed class DebtDetailsDialog : FormWindow
     {
         var name=new TextBox{Text=debt.Name,MaxLength=100};var lender=new TextBox{Text=debt.Lender,MaxLength=100};var due=DateInput(debt.DueDate??DateOnly.FromDateTime(DateTime.Today));if(debt.DueDate is null)due.Text="";
         Field("Debt Name *",name);if(debt.Kind==DebtKind.External)Field("Lender *",lender);else Field("Return to",Ui.Text(session.Document.BankName(debt.SelfBankId!.Value)));DateField("Due Date",due);
-        OnSubmit(()=>session.Apply(DebtService.EditDetails(session.Document,debt.Id,name.Text.Trim(),lender.Text.Trim(),string.IsNullOrWhiteSpace(due.Text)?null:ReadDate(due))));
+        OnSubmit(()=>FormValidation.At(name,()=>session.Apply(DebtService.EditDetails(session.Document,debt.Id,name.Text.Trim(),lender.Text.Trim(),FormValidation.OptionalDate(due)))));
     }
 }

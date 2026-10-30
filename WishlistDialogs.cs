@@ -20,8 +20,11 @@ internal sealed class WishlistDetailsDialog : FormWindow
         Field("Name *",name);DateField("Planned Date *",plannedDate);if(existing is not null)DateField("Update Date *",updateDate);Field("Target Amount\n(Rp) *",target);DateField("Target Date",date);Field("Priority",priority);Field("Notes",notes);
         var dateNote=Ui.Text("Planned Date is when this wishlist began. Target Date is the purchase goal. For historical records, choose the original dates. Each funding activity has its own date.",12,Ui.Muted);dateNote.Margin=new Thickness(0,12,0,0);AddFields(dateNote);
         OnSubmit(()=>{
-            var item=new WishlistItem(existing?.Id??Guid.NewGuid(),name.Text.Trim(),MoneyEditing.Read(target.Text),string.IsNullOrWhiteSpace(date.Text)?null:ReadDate(date),(WishlistPriority)priority.SelectedItem,notes.Text.Trim());
-            session.Apply(existing is null?WishlistService.Create(session.Document,item,ReadDate(plannedDate)):WishlistService.Edit(session.Document,item,ReadDate(updateDate),ReadDate(plannedDate)));ResultId=item.Id;
+            var value=FormValidation.Money(target);FormValidation.Require(value>0,target,"Target amount must be greater than zero, with at most two decimals.");
+            var targetDate=FormValidation.OptionalDate(date);
+            var item=new WishlistItem(existing?.Id??Guid.NewGuid(),name.Text.Trim(),value,targetDate,(WishlistPriority)priority.SelectedItem,notes.Text.Trim());
+            var planned=ReadDate(plannedDate);FormValidation.Require(planned!=default&&planned<=DateOnly.FromDateTime(DateTime.Today),plannedDate,"Wishlist activity date must be today or earlier.");
+            FormValidation.At(existing is null?plannedDate:updateDate,()=>session.Apply(existing is null?WishlistService.Create(session.Document,item,planned):WishlistService.Edit(session.Document,item,ReadDate(updateDate),planned)));ResultId=item.Id;
         });Loaded+=(_,_)=>name.Focus();
     }
 }
@@ -51,7 +54,7 @@ internal sealed class WishlistActivityDateDialog : FormWindow
             _=>"Only this activity date changes. No bank transaction is created, and current amounts, allocations and wishlist status stay unchanged."
         },12,Ui.Muted);note.Margin=new Thickness(0,12,0,0);AddFields(note);
         if(activity.Kind is not WishlistEventKind.Created and not WishlistEventKind.Edited){var order=Ui.Text("Dates must fit the surrounding funds activities and historical balances. To move several activities earlier, edit the oldest first; to move them later, edit the newest first.",12,Ui.Muted);order.Margin=new Thickness(0,8,0,0);AddFields(order);}
-        OnSubmit(()=>session.Apply(WishlistService.EditActivityDate(session.Document,activity.Id,ReadDate(date))));
+        OnSubmit(()=>FormValidation.At(date,()=>session.Apply(WishlistService.EditActivityDate(session.Document,activity.Id,ReadDate(date)))));
     }
 }
 
@@ -62,7 +65,7 @@ internal sealed class WishlistTargetDateDialog : FormWindow
         var date=DateInput(item.TargetDate??DateOnly.FromDateTime(DateTime.Today));if(item.TargetDate is null)date.Text="";
         Field("Wishlist",Ui.Text(item.Name,13));DateField("Target Date",date);
         AddFields(Ui.Text("This changes only the target date. Funding, purchase history and wishlist status stay unchanged. Save your file with Ctrl+S.",12,Ui.Muted));
-        OnSubmit(()=>session.Apply(WishlistService.EditTargetDate(session.Document,item.Id,string.IsNullOrWhiteSpace(date.Text)?null:ReadDate(date))));
+        OnSubmit(()=>FormValidation.At(date,()=>session.Apply(WishlistService.EditTargetDate(session.Document,item.Id,FormValidation.OptionalDate(date)))));
     }
 }
 
@@ -96,18 +99,24 @@ internal sealed class WishlistFundsDialog : FormWindow
                 if(bank.SelectedItem is not Bank b)return;var at=ReadDate(date);var allocated=session.Document.WishlistAllocated(wish.Id,b.Id,at);var available=session.Document.AvailableBalance(b.Id,at);
                 summary.Text=$"As of {Display.Date(at)}\n{b.Name} available: {Display.Money(available)}\n{wish.Name} allocation: {Display.Money(allocated)}";
                 if(action=="move"&&target.SelectedItem is Bank to)summary.Text+=$"\n{to.Name} available: {Display.Money(session.Document.AvailableBalance(to.Id,at))}\n"+(method.SelectedIndex==0?"A bank transfer is recorded; admin fee uses source available balance.":"Only the allocation changes. No transfer or admin fee is recorded.");
-                if(action=="purchase"){var price=MoneyEditing.Read(amount.Text,true);summary.Text+=price>allocated?$"\nAllocation shortfall: {Display.Money(price-allocated)}. Move or allocate funds first.":$"\nRemaining allocation in this account: {Display.Money(allocated-price)}";}
+                if(action=="purchase"){var price=FormValidation.Money(amount,true);summary.Text+=price>allocated?$"\nAllocation shortfall: {Display.Money(price-allocated)}. Move or allocate funds first.":$"\nRemaining allocation in this account: {Display.Money(allocated-price)}";}
             }catch(Exception e)when(e is InvalidDataException or FormatException){summary.Text=e.Message;}
         }
         bank.SelectionChanged+=(_,_)=>Refresh();target.SelectionChanged+=(_,_)=>Refresh();method.SelectionChanged+=(_,_)=>Refresh();date.TextChanged+=(_,_)=>Refresh();amount.TextChanged+=(_,_)=>Refresh();Refresh();
         OnSubmit(()=>{
-            FinanceDocument.Require(bank.SelectedItem is Bank,"Choose a bank.");var b=(Bank)bank.SelectedItem;var at=ReadDate(date);var value=MoneyEditing.Read(amount.Text);var admin=MoneyEditing.Read(fee.Text,true);
-            var updated=action switch{
+            FormValidation.Require(bank.SelectedItem is Bank,bank,"Choose a bank.");var b=(Bank)bank.SelectedItem;var at=ReadDate(date);var value=FormValidation.Money(amount);var admin=fee.IsEnabled?FormValidation.Money(fee,true):0;
+            FormValidation.Require(value>0,amount,"Amount must be greater than zero, with at most two decimals.");
+            FormValidation.Require(admin>=0,fee,"Admin fee must be zero or greater, with at most two decimals.");
+            FormValidation.Require(at!=default&&at<=DateOnly.FromDateTime(DateTime.Today),date,"Wishlist activity date must be today or earlier.");
+            var latest=session.Document.WishlistEvents.Where(e=>e.WishlistId==wish.Id&&e.Kind is not WishlistEventKind.Created and not WishlistEventKind.Edited).Select(e=>e.Date).DefaultIfEmpty(DateOnly.MinValue).Max();
+            FormValidation.Require(at>=latest,date,"Choose a date on or after the latest wishlist funds activity.");
+            if(action=="move")FormValidation.Require(target.SelectedItem is Bank to&&to.Id!=b.Id,target,"Choose two different banks to move funds.");
+            var updated=FormValidation.At(amount,()=>action switch{
                 "allocate"=>WishlistService.Allocate(session.Document,wish.Id,b.Id,value,at),
                 "release"=>WishlistService.Release(session.Document,wish.Id,b.Id,value,at),
                 "move"=>WishlistService.Move(session.Document,wish.Id,b.Id,(target.SelectedItem as Bank)?.Id??Guid.Empty,value,method.SelectedIndex==0?admin:0,at,method.SelectedIndex==0),
                 _=>WishlistService.Purchase(session.Document,wish.Id,b.Id,(categories.SelectedItem as Category)?.Id??Guid.Empty,value,admin,at)
-            };session.Apply(updated);
+            });session.Apply(updated);
         });
     }
 }

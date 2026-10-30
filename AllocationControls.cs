@@ -16,7 +16,7 @@ public sealed class PurposeDialog : FormWindow
         Field("Purpose Name *", name);
         Submit.Click += (_, _) => Attempt(() => {
             var purpose = new Purpose(existing?.Id ?? Guid.NewGuid(), name.Text.Trim());
-            var copy = doc.Copy(); copy.Purposes.RemoveAll(p => p.Id == purpose.Id); copy.Purposes.Add(purpose); copy.Validate();
+            var copy = doc.Copy(); copy.Purposes.RemoveAll(p => p.Id == purpose.Id); copy.Purposes.Add(purpose); FormValidation.At(name,copy.Validate);
             Result = purpose; DialogResult = true;
         });
         Loaded += (_, _) => name.Focus();
@@ -79,7 +79,7 @@ public sealed class AllocationEditor : StackPanel
         var add=Ui.Button("+ Add allocation",()=>AddRow());add.Foreground=Ui.Accent;add.HorizontalAlignment=HorizontalAlignment.Left;add.BorderThickness=new Thickness(0);add.Margin=new Thickness(0,12,0,0);add.Padding=new Thickness(0,8,12,8);Children.Add(add);
         var create=Ui.Button("New purpose",()=>{var dialog=new PurposeDialog(owner,session.Document);if(dialog.ShowDialog()!=true)return;StorePurpose(dialog.Result!);AddRow(dialog.Result!.Id);});create.Foreground=Ui.Accent;create.HorizontalAlignment=HorizontalAlignment.Left;create.BorderThickness=new Thickness(0);create.Margin=new Thickness(0);create.Padding=new Thickness(0,8,12,8);Children.Add(create);
         var totals=Ui.Stack();totals.Margin=new Thickness(0,20,0,0);
-        void TotalLine(string label,TextBlock value){var line=new DockPanel{Margin=new Thickness(0,10,0,0)};DockPanel.SetDock(value,Dock.Right);line.Children.Add(value);line.Children.Add(Ui.Text(label,14));totals.Children.Add(line);}
+        void TotalLine(string label,TextBlock value){var line=new DockPanel{Margin=new Thickness(0,12,0,0)};DockPanel.SetDock(value,Dock.Right);line.Children.Add(value);line.Children.Add(Ui.Text(label,14));totals.Children.Add(line);}
         TotalLine("Allocated total",allocated);TotalLine("Remaining",remaining);Children.Add(new Border{BorderBrush=Ui.Line,BorderThickness=new Thickness(0,1,0,0),Child=totals});
         var note=Ui.Text("Purpose only is a note. Borrow as Self Debt takes funds from From Bank; Repay Self Debt returns funds to To Bank. Select the debt explicitly. Admin fees never change principal.",12,Ui.Muted);note.Margin=new Thickness(0,20,0,0);Children.Add(note);
         if(existing is not null)foreach(var allocation in existing)AddRow(allocation.PurposeId,allocation.Amount,allocation.SelfDebtId,allocation.DebtAction);
@@ -115,7 +115,7 @@ public sealed class AllocationEditor : StackPanel
         var purpose=new ComboBox{Style=(Style)Application.Current.FindResource("PurposeComboStyle"),IsEditable=true,IsTextSearchEnabled=false,DisplayMemberPath="Name",ItemsSource=session.Document.Purposes.OrderBy(p=>p.Name).ToList(),ToolTip="Choose a purpose or type a new name, then click Create purpose."};
         if(purposeId is Guid id)purpose.SelectedItem=session.Document.Purposes.FirstOrDefault(p=>p.Id==id);
         var input=new MoneyTextBox(amount){Margin=new Thickness(8,0,0,0)};
-        var create=Ui.Button("Create purpose",()=>{});create.Foreground=Ui.Accent;create.HorizontalAlignment=HorizontalAlignment.Left;create.Margin=new Thickness(0);create.Padding=new Thickness(0,6,8,6);create.BorderThickness=new Thickness(0);create.Visibility=Visibility.Collapsed;
+        var create=Ui.Button("Create purpose",()=>{});create.Foreground=Ui.Accent;create.HorizontalAlignment=HorizontalAlignment.Left;create.Margin=new Thickness(0);create.Padding=new Thickness(0,4,8,4);create.BorderThickness=new Thickness(0);create.Visibility=Visibility.Collapsed;
         var action=new ComboBox{ItemsSource=new[]{"Purpose only","Borrow as Self Debt","Repay Self Debt"},SelectedIndex=selfDebtId is null&&!borrowNew?0:debtAction==SelfDebtAction.Borrow?1:2,Margin=new Thickness(0,4,0,4)};
         var debt=new ComboBox{DisplayMemberPath="Name"};var debtPanel=Ui.Stack();debtPanel.Children.Add(debt);
         var newFields=Ui.Stack();var name=new TextBox{MaxLength=100};var due=FormWindow.DateInput(DateOnly.FromDateTime(DateTime.Today));due.Text="";
@@ -132,25 +132,29 @@ public sealed class AllocationEditor : StackPanel
     public void UpdateTotals()
     {
         foreach(var row in rows)UpdateDebtFields(row);
-        try{var total=rows.Sum(row=>MoneyEditing.Read(row.Amount.Text,emptyAsZero:true));var difference=transferAmount()-total;allocated.Text=Display.Money(total);remaining.Text=Display.Money(difference);remaining.Foreground=rows.Count==0?Ui.Muted:difference==0?Ui.Green:Ui.Red;}
+        try{var total=rows.Sum(row=>FormValidation.Money(row.Amount,emptyAsZero:true));var difference=transferAmount()-total;allocated.Text=Display.Money(total);remaining.Text=Display.Money(difference);remaining.Foreground=rows.Count==0?Ui.Muted:difference==0?Ui.Green:Ui.Red;}
         catch(InvalidDataException){allocated.Text="—";remaining.Text="—";}
     }
     public (IReadOnlyList<TransferAllocation> Allocations,IReadOnlyList<Debt> NewDebts) Read()
     {
         var allocations=new List<TransferAllocation>();var newDebts=new List<Debt>();
         foreach(var row in rows){
-            var name=row.Purpose.Text.Trim();var purpose=session.Document.Purposes.FirstOrDefault(p=>string.Equals(p.Name,name,StringComparison.OrdinalIgnoreCase));FinanceDocument.Require(purpose is not null,"Choose a purpose, or click Create purpose for a new name.");
+            var name=row.Purpose.Text.Trim();var purpose=session.Document.Purposes.FirstOrDefault(p=>string.Equals(p.Name,name,StringComparison.OrdinalIgnoreCase));FormValidation.Require(purpose is not null,row.Purpose,"Choose a purpose, or click Create purpose for a new name.");
             Guid? debtId=null;var action=SelfDebtAction.Repay;
             if(row.Action.SelectedIndex!=0){
-                FinanceDocument.Require(row.Debt.SelectedItem is DebtChoice,"Choose a Self Debt for each marked allocation.");var selected=(DebtChoice)row.Debt.SelectedItem;
+                FormValidation.Require(row.Debt.SelectedItem is DebtChoice,row.Debt,"Choose a Self Debt for each marked allocation.");var selected=(DebtChoice)row.Debt.SelectedItem;
                 action=row.Action.SelectedIndex==1?SelfDebtAction.Borrow:SelfDebtAction.Repay;debtId=selected.Id;
                 if(debtId is null){
-                    FinanceDocument.Require(action==SelfDebtAction.Borrow,"Choose an existing Self Debt for repayment.");DateOnly? due=null;
-                    if(!string.IsNullOrWhiteSpace(row.Due.Text)){FinanceDocument.Require(DateOnly.TryParseExact(row.Due.Text.Trim(),"MM/dd/yyyy",Display.Culture,System.Globalization.DateTimeStyles.None,out var parsed),"Enter a valid due date in MM/DD/YYYY format.");due=parsed;}
+                    FormValidation.Require(action==SelfDebtAction.Borrow,row.Debt,"Choose an existing Self Debt for repayment.");
+                    FormValidation.Require(!string.IsNullOrWhiteSpace(row.Name.Text),row.Name,"Enter a debt name (up to 100 characters).");
+                    var due=FormValidation.OptionalDate(row.Due);
                     var created=new Debt(Guid.NewGuid(),row.Name.Text.Trim(),"",due,Kind:DebtKind.Self,SelfBankId:sourceBank());newDebts.Add(created);debtId=created.Id;
                 }
             }
-            allocations.Add(new(purpose.Id,MoneyEditing.Read(row.Amount.Text),debtId,action));
+            var value=FormValidation.Money(row.Amount);
+            FormValidation.Require(value>0,row.Amount,"Each allocation amount must be greater than zero, with at most two decimals.");
+            FormValidation.Require(!allocations.Any(a=>a.PurposeId==purpose.Id&&a.SelfDebtId==debtId&&a.DebtAction==action),row.Purpose,"Use each purpose, Self Debt and action combination only once in a transfer.");
+            allocations.Add(new(purpose.Id,value,debtId,action));
         }
         return(allocations,newDebts);
     }

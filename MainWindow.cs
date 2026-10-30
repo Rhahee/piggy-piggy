@@ -49,6 +49,9 @@ public sealed partial class MainWindow : Window
     {
         Title = hasDocument ? $"{NameOfDocument}{(session.Dirty ? "*" : "")} — Piggy" : "Piggy";
         status.Text = hasDocument ? $"{session.Document.Transactions.Count} transactions   |   {(session.Dirty ? "Unsaved changes" : session.FilePath is null ? "Not saved yet" : "Saved")} {(session.FilePath is not null ? "  |   " + session.FilePath : "")}" : "";
+        status.ToolTip = hasDocument && session.FilePath is string path
+            ? new TextBlock { Text = path, TextWrapping = TextWrapping.Wrap, MaxWidth = 600 } : null;
+        ToolTipService.SetShowDuration(status,60000);
     }
     private void Render()
     {

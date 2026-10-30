@@ -156,6 +156,7 @@ internal static class Program
                 if(attempt!=3)Equal(new Version(9,0,0,attempt),result.Release!.Version);
             }
         });
+        passed+=FormPolishChecks.Run(owner);
         owner.Close();Console.WriteLine($"All {passed} isolated WPF checks passed.");return 0;
     }
 }

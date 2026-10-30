@@ -34,7 +34,8 @@ public sealed class PeriodDialog : FormWindow
 
         DateOnly ReadMonth()
         {
-            FinanceDocument.Require(int.TryParse(year.Text,out var y) && y is >= 1 and <= 9999 && months.SelectedIndex >= 0,"Enter a year between 1 and 9999.");
+            FormValidation.Require(months.SelectedIndex >= 0,months,"Choose a month.");
+            FormValidation.Require(int.TryParse(year.Text,out var y) && y is >= 1 and <= 9999,year,"Enter a year between 1 and 9999.");
             return new(y,months.SelectedIndex + 1,1);
         }
         (ReportPeriod Period,PaySchedule? Schedule) Read()
@@ -44,14 +45,14 @@ public sealed class PeriodDialog : FormWindow
             var schedule = document.PaySchedule;
             if (mode == ReportPeriodMode.PayCycle)
             {
-                FinanceDocument.Require(int.TryParse(day.Text,out var payday) && payday is >= 1 and <= 31,"Enter a monthly payday from 1 to 31.");
+                FormValidation.Require(int.TryParse(day.Text,out var payday) && payday is >= 1 and <= 31,day,"Enter a monthly payday from 1 to 31.");
                 var actual = ReadDate(first); var adjustment = (WeekendAdjustment)weekend.SelectedIndex;
                 var same = schedule is not null && month >= schedule.FirstMonth && schedule.RuleFor(month).MonthlyDay == payday && schedule.RuleFor(month).Weekend == adjustment && schedule.ActualPayday(month) == actual;
                 if (!same) schedule = new PaySchedule((schedule?.Rules ?? []).Where(r => r.EffectiveMonth != month).Append(new(month,payday,adjustment,actual)).OrderBy(r => r.EffectiveMonth).ToArray());
-                schedule!.Validate();
+                FormValidation.At(first,()=>schedule!.Validate());
             }
             var selection = new ReportPeriod(mode,month,mode == ReportPeriodMode.CustomRange ? ReadDate(start) : current.CustomStart,mode == ReportPeriodMode.CustomRange ? ReadDate(end) : current.CustomEnd);
-            selection.Range(schedule); return (selection,schedule);
+            FormValidation.At(mode==ReportPeriodMode.CustomRange?end:mode==ReportPeriodMode.PayCycle?first:year,()=>selection.Range(schedule)); return (selection,schedule);
         }
         void Refresh(bool recalculatePayday = false)
         {

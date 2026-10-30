@@ -6,7 +6,7 @@ The initial baseline includes bank accounts, Income/Expense/Transfer with separa
 
 ## Automated checks
 
-The baseline suite contains **433 core checks** and **20 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, format-1–8 compatibility, format-9 Wishlist/Debt links, reservations, debt repayments and corrections, persistent report periods, compact accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering.
+The current suite contains **433 core checks** and **40 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, format-1–8 compatibility, format-9 Wishlist/Debt links, reservations, debt repayments and corrections, persistent report periods, compact accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering. The 20 new WPF cases cover validation focus, scrolling, cancellation without staged data, and blank opening balances.
 
 The WPF checks instantiate production controls in an isolated STA process. They check behavior and measurement, not rendered pixels. Update HTTP cases use simulated responses unless a live check is explicitly recorded.
 
@@ -30,7 +30,7 @@ The exact packaged EXE reported FileVersion **0.1.0.0** and the baseline commit 
 
 Public checks confirmed that GitHub Latest and the generation-3 channel point to **0.1.0.0**, with a matching downloadable checksum. The production release checker returned **UpToDate** for installed versions **0.1.0.0** and **0.1.0.1**, so the development build is not offered a downgrade. A complete in-place replacement/restart was not performed.
 
-## Native window update — 0.1.0.1 (unreleased)
+## Native window update — 0.1.0.1
 
 On **2026-10-30**, all **433 core checks** and **20 isolated WPF checks** passed after switching the main window to standard Windows chrome. The self-contained Windows x64 EXE built successfully with FileVersion **0.1.0.1**. The source directory's build output remains separate from the checked-in code.
 
@@ -38,15 +38,21 @@ Native UI inspection confirmed the standard system title bar and window menu, ma
 
 The fixture's transaction identities, dates, amounts, fees and links were checked after saving and remained unchanged. No real financial document was used. Full Snap layout selection, interactive resize across DPI settings, and alternate monitor/taskbar configurations remain outside this check.
 
-This version is **unreleased** at the user's request. No tag or GitHub Release is created, and `update-channel.json` remains unchanged until publication is approved.
+These checks were completed before the user subsequently approved publication of 0.1.0.1 with the scoped form polish below.
 
-## Approved Piggy identity — 0.1.0.1 (unreleased)
+## Approved Piggy identity — 0.1.0.1
 
 The approved magenta-and-white pig / gold coin / **Piggy** logo was copied without visual changes; its SHA-256 was checked against the selected concept. A matching standalone gold coin was generated with a transparent background and packaged into a Windows ICO containing 16, 20, 24, 32, 40, 48, 64, 128 and 256 pixel frames. Windows successfully decoded the 16-pixel frame. Shell icon extraction from the final EXE returned a gold coin icon, and the EXE reported ProductName **Piggy** and FileVersion **0.1.0.1**.
 
 All **433 core checks** and **20 isolated WPF checks** passed after the branding change. The final self-contained EXE was inspected in windowed and maximized states: the full approved logo, New and Open remained centered and visible; version/update controls remained at the bottom right. Open displayed the renamed Piggy document dialog with the coin icon, and Cancel returned to the start page. New opened an empty workspace, and File → Close returned to the logo screen. No real financial document was opened during these checks.
 
 The embedded PNGs use explicit application-assembly resource URIs, so they also load when production windows are instantiated by the separate WPF check executable. Build output remains outside the source directory. The executable/archive naming contract, document format, update channel and published 0.1.0.0 assets are unchanged. See [branding notes](BRANDING.md) for the image-generation prompt and icon conversion command.
+
+## Scoped form polish — 0.1.0.1
+
+On **2026-10-30**, all **433 core checks** and **40 isolated WPF checks** passed. The Release build completed with zero warnings and errors, and a self-contained Windows x64 EXE was published locally. New modal checks submit invalid forms after focusing Submit, then verify that the relevant input receives keyboard focus. Cases include required/duplicate names, category/account choices, malformed and historical dates, amounts and fees, Income fee limits, transfer destinations, Debt/Lender/due-date fields, Self Debt repayment banks, Period ranges, and Wishlist fields. A shortened form verifies that the focused Debt Name scrolls into view. Rejected submissions preserve serialized document state; a blank opening balance still saves as zero.
+
+Native EXE inspection confirmed consistent form spacing and the Category validation indicator on an empty Expense submission. A fictional eight-transaction format-9 document opened with the expected balance and Saved state; the long path was visibly truncated, while the status control exposed the complete wrapping tooltip text. The invalid transaction was canceled. The fixture was not saved. The model, financial calculations, document format and updater ordering were not changed by this polish.
 
 ## Limits
 

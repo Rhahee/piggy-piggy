@@ -1,13 +1,12 @@
-# Piggy 0.1.0.1 — Native Windows Frame & Piggy Identity
+# Piggy 0.1.0.1 — Native Windows Frame, Piggy Identity & Form Polish
 
-**Status: Unreleased.** Source and local build only. No release tag or GitHub Release has been created for this version, and `update-channel.json` has not been promoted. Publication requires separate approval.
-
-The published baseline is [0.1.0.0](docs/releases/0.1.0.0.md), available on [GitHub Releases](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.0.0). Its package retains the baseline custom title bar.
-
-**Change type: Minor Fix.** This update uses the standard Windows window frame and the approved Piggy visual identity. The version remains **0.1.0.1** as requested.
+**Change type: Minor Fix.** This update uses the standard Windows window frame, the approved Piggy identity, and clearer form validation. The version remains **0.1.0.1** as requested.
 
 ## What changed
 
+- Invalid form input now receives focus when submitting. Fields inside scrolling forms are brought into view, and invalid text is selected for correction. This covers required fields, amounts, dates, account choices and applicable Debt/Wishlist/Period inputs without moving focus while typing.
+- Hovering over the document status bar shows the full saved file path in a wrapping tooltip when the visible path is truncated.
+- Form row margins and input/button padding now follow four-unit spacing. Opening balance still accepts a blank value as zero; hidden or disabled fields do not block submission.
 - The visible application name is now **Piggy**, with the approved magenta-and-white pig eating a gold coin above the Piggy wordmark.
 - A gold coin alone is used for the application and window icons, with transparent surroundings and icon frames from 16 to 256 pixels.
 - The startup page now centers **logo → New → Open** vertically on a white background. New and Open use matching 240 × 44 buttons, separated by 12 units; the version/update indicator stays at the bottom right.
@@ -27,4 +26,4 @@ The executable remains **Piggy - Piggy.exe** and update archives remain **Piggy-
 
 For a manual update, save and close the running application, extract the new portable package into a writable folder, then run **Piggy - Piggy.exe** and open your `.mpb` document. The in-app updater can offer this version after its release package, checksum and channel metadata have been published.
 
-Validation results and remaining coverage limits are recorded in [docs/VERIFICATION.md](docs/VERIFICATION.md).
+Validation: **433 core checks and 40 isolated WPF checks** passed, including 20 new form regression cases. Portable EXE inspection used fictional data. Validation results and remaining coverage limits are recorded in [verification notes](https://github.com/Rhahee/piggy-piggy/blob/main/docs/VERIFICATION.md).

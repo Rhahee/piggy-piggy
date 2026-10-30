@@ -1,18 +1,16 @@
 # Piggy
 
-**Versi unduhan: [0.1.0.0 — Initial Development Baseline](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.0.0)**
+**Versi: [0.1.0.1 — Native Windows Frame, Piggy Identity & Form Polish](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.0.1)**
 
-**Versi pengembangan: 0.1.0.1 — Native Windows Frame & Piggy Identity**
-
-**Status: Unreleased.** Versi ini sedang disiapkan pada kode sumber dan build lokal. Tag, GitHub Release, dan promosi kanal updater menunggu persetujuan publikasi.
-
-Status Unreleased di atas berlaku untuk **0.1.0.1**. Versi **0.1.0.0** sudah dipublikasikan beserta ZIP dan checksum; lihat [catatan rilis baseline](docs/releases/0.1.0.0.md).
+**Jenis perubahan: Minor Fix.** Baseline awal tetap tersedia melalui [catatan rilis 0.1.0.0](docs/releases/0.1.0.0.md).
 
 A portable, offline Windows application for personal finances across multiple bank accounts. English interface, magenta Office-style ribbon, Rupiah amounts (**Rp 1,250,000.00**), and dates in **MM/DD/YYYY**.
 
 [Repository](https://github.com/Rhahee/piggy-piggy) · [Releases](https://github.com/Rhahee/piggy-piggy/releases) · [Verification](docs/VERIFICATION.md) · [Release guide](docs/RELEASING.md)
 
 ## Update 0.1.0.1 — Minor Fix
+
+Validasi isian kini mengarahkan fokus ke kolom yang perlu diperbaiki dan menggulirkannya ke area terlihat. Lokasi dokumen lengkap tersedia melalui tooltip pada status bar. Margin dan padding form dirapikan dengan kelipatan empat; saldo awal kosong tetap berarti nol.
 
 Jendela utama sekarang memakai title bar, bingkai, dan tombol minimize/maximize/close bawaan Windows. Resize, maximize, restore, dan Snap ditangani OS; ketersediaan Snap mengikuti versi serta pengaturan Windows. Tombol **Save** berada di sisi kanan baris **File / Home / Data / View**, dengan tooltip **Save (Ctrl+S)**. Nama dokumen dan tanda **\*** untuk perubahan yang belum disimpan tetap tampil di title bar.
 

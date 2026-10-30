@@ -1,4 +1,4 @@
-# Piggy visual identity — 0.1.0.1 (unreleased)
+# Piggy visual identity — 0.1.0.1
 
 The approved mark is a smiling magenta-and-white pig eating a warm gold coin, above the rounded **Piggy** wordmark. The user approved this initial direction on 2026-10-30. It replaces the earlier window-grid concepts.
 
@@ -16,7 +16,7 @@ The start screen is one centered vertical group: **logo → New → Open**. The 
 
 The visible application name is **Piggy**. The executable and release archive retain their existing names, **Piggy - Piggy.exe** and **Piggy-Piggy-VERSION-win-x64.zip**, to remain compatible with the already published 0.1.0.0 updater. Internal C# namespaces, the `piggy-piggy` repository, `.mpb` documents, and accounting rules remain unchanged.
 
-This work stays in **0.1.0.1**, which is **unreleased**. The published baseline and update channel continue to identify 0.1.0.0.
+This identity ships in **0.1.0.1**. Executable and archive names remain compatible with the published 0.1.0.0 updater.
 
 ## Coin derivative prompt
 

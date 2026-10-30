@@ -69,7 +69,7 @@ public static class Ui
     {
         var s = Stack(vertical ? Orientation.Vertical : Orientation.Horizontal);
         var image = Icon(icon, vertical ? 28 : 20, color);
-        image.Margin = label.Length == 0 ? new Thickness(0) : vertical ? new Thickness(0,0,0,6) : new Thickness(0,0,8,0);
+        image.Margin = label.Length == 0 ? new Thickness(0) : vertical ? new Thickness(0,0,0,4) : new Thickness(0,0,8,0);
         s.Children.Add(image);
         var button = Button("", action); button.Content = s; button.Background = Brushes.Transparent; button.BorderThickness = new Thickness(0); button.Padding = new Thickness(12,8,12,8);
         if (label.Length > 0) { var text = Text(label,14); text.HorizontalAlignment = HorizontalAlignment.Center; text.SetBinding(TextBlock.ForegroundProperty,new Binding("Foreground") { Source = button }); s.Children.Add(text); }
