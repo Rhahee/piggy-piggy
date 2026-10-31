@@ -1,29 +1,13 @@
-# Piggy 0.1.0.1 — Native Windows Frame, Piggy Identity & Form Polish
+# Piggy 0.1.0.2 — Ribbon and Ledger Polish
 
-**Change type: Minor Fix.** This update uses the standard Windows window frame, the approved Piggy identity, and clearer form validation. The version remains **0.1.0.1** as requested.
+**Change type: Minor Fix.** Portable Windows x64 update from 0.1.0.1; document format 9 and updater epoch 3 are retained.
 
-## What changed
+- Ribbon commands retain square 72 × 72 buttons, with consistent 32 × 32 icons, a four-unit icon/label gap, and a single 16-unit label line. Tooltips and accessible names retain complete command labels.
+- Amount headers align right with numeric cells; existing centered Type, Allocation and Debt icons remain compact.
+- Buttons distinguish hover, pressed, disabled and keyboard-focus states. Focus borders are overlaid to avoid shifting content. Selected navigation uses a white focus border on magenta.
+- Ledger rows use separate hover and selection colors, with a visible keyboard-focus outline on the current cell.
+- Overview and Transactions show centered explanatory messages inside empty table bodies. Messages automatically disappear when rows become available, including after search changes.
 
-- Invalid form input now receives focus when submitting. Fields inside scrolling forms are brought into view, and invalid text is selected for correction. This covers required fields, amounts, dates, account choices and applicable Debt/Wishlist/Period inputs without moving focus while typing.
-- Hovering over the document status bar shows the full saved file path in a wrapping tooltip when the visible path is truncated.
-- Form row margins and input/button padding now follow four-unit spacing. Opening balance still accepts a blank value as zero; hidden or disabled fields do not block submission.
-- The visible application name is now **Piggy**, with the approved magenta-and-white pig eating a gold coin above the Piggy wordmark.
-- A gold coin alone is used for the application and window icons, with transparent surroundings and icon frames from 16 to 256 pixels.
-- The startup page now centers **logo → New → Open** vertically on a white background. New and Open use matching 240 × 44 buttons, separated by 12 units; the version/update indicator stays at the bottom right.
-- Windows now draws the title bar, border and minimize/maximize/close buttons. Their appearance follows the operating system's window decoration settings.
-- Windows handles resizing, maximize/restore and Snap. Snap features depend on the installed Windows version and settings.
-- The custom maximize work-area override was removed so it does not compete with the native frame. Monitor-aware dialog sizing remains available.
-- The **Save** icon is now at the right of the **File / Home / Data / View** row. It remains a 32 × 32 button with the accessible name **Save** and tooltip **Save (Ctrl+S)**.
-- The document name and unsaved **\*** marker remain in the native title bar. **Ctrl+S**, **File → Save**, and the unsaved-changes confirmation still use the existing Save flow.
+The font scale, financial calculations, manual Save behavior, document format 9 and updater epoch 3 remain unchanged. Date pickers now open the month/year from the input and reset stale calendar navigation on reopening. Blank or invalid date text is preserved while the calendar opens today without a stale selection. Transaction searches retain numeric/text sorting and header direction, including through empty results. Ctrl+F and the Search command focus the input after the rendered workspace is ready.
 
-The application content retains its magenta ribbon theme. An automatic light/dark theme for the application content is not introduced.
-
-## Compatibility and installation
-
-The application remains portable C#/WPF for Windows x64. Document format **9**, compatibility with formats **1–8**, and update epoch **3** are retained. Existing `.mpb` documents can be opened directly. Financial calculations and transaction data are unchanged.
-
-The executable remains **Piggy - Piggy.exe** and update archives remain **Piggy-Piggy-VERSION-win-x64.zip** so the published 0.1.0.0 updater can recognize future packages. The repository and internal namespaces retain their existing names. See [branding notes](docs/BRANDING.md) for asset provenance and icon regeneration.
-
-For a manual update, save and close the running application, extract the new portable package into a writable folder, then run **Piggy - Piggy.exe** and open your `.mpb` document. The in-app updater can offer this version after its release package, checksum and channel metadata have been published.
-
-Validation: **433 core checks and 40 isolated WPF checks** passed, including 20 new form regression cases. Portable EXE inspection used fictional data. Validation results and remaining coverage limits are recorded in [verification notes](https://github.com/Rhahee/piggy-piggy/blob/main/docs/VERIFICATION.md).
+Verification on 2026-10-31: self-contained Windows x64 publish succeeded; all 435 core checks and 44 isolated WPF checks passed. Native EXE inspection covered empty and populated tables, ribbon labels, and selected/focused ledger cells using fictional data. The 1000 × 640 workspace and Ctrl+F focus were checked in WPF. Update detection from 0.1.0.1 to 0.1.0.2 passed with simulated channel/release responses; a live install/restart is still pending publication. Alternate DPI and multiple-monitor coverage remain pending. The public update channel is promoted only after the verified release assets are published.

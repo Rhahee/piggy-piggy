@@ -79,8 +79,19 @@ public class FormWindow : Window
         var row = new DockPanel(); var button = Ui.SquareIconButton("calendar", () => { }, "Choose date"); button.Margin = new Thickness(4,0,0,0);
         var popup = new Popup { PlacementTarget = button, Placement = PlacementMode.Bottom, StaysOpen = false, AllowsTransparency = true };
         var calendar = new Calendar(); popup.Child = Ui.Box(calendar, new Thickness(4));
-        button.Click += (_, _) => { if (DateOnly.TryParseExact(input.Text, "MM/dd/yyyy", Display.Culture, System.Globalization.DateTimeStyles.None, out var parsed)) calendar.SelectedDate = parsed.ToDateTime(TimeOnly.MinValue); popup.IsOpen = true; };
-        calendar.SelectedDatesChanged += (_, _) => { if (calendar.SelectedDate is DateTime date) { input.Text = Display.Date(DateOnly.FromDateTime(date)); popup.IsOpen = false; } };
+        var synchronizing = false;
+        button.Click += (_, _) => {
+            synchronizing = true;
+            try {
+                calendar.DisplayMode = CalendarMode.Month;
+                var valid = DateOnly.TryParseExact(input.Text, "MM/dd/yyyy", Display.Culture, System.Globalization.DateTimeStyles.None, out var parsed);
+                calendar.SelectedDate = valid ? parsed.ToDateTime(TimeOnly.MinValue) : null;
+                calendar.DisplayDate = calendar.SelectedDate ?? DateTime.Today;
+            }
+            finally { synchronizing = false; }
+            popup.IsOpen = true;
+        };
+        calendar.SelectedDatesChanged += (_, _) => { if (!synchronizing && calendar.SelectedDate is DateTime date) { input.Text = Display.Date(DateOnly.FromDateTime(date)); popup.IsOpen = false; } };
         DockPanel.SetDock(button, Dock.Right); row.Children.Add(button); row.Children.Add(input); return row;
     }
     protected static DateOnly ReadDate(TextBox input) => FormValidation.Date(input);

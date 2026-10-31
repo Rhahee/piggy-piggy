@@ -1,12 +1,16 @@
 # Piggy
 
-**Versi: [0.1.0.1 — Native Windows Frame, Piggy Identity & Form Polish](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.0.1)**
+**Versi: [0.1.0.2 — Ribbon and Ledger Polish](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.0.2)**
 
 **Jenis perubahan: Minor Fix.** Baseline awal tetap tersedia melalui [catatan rilis 0.1.0.0](docs/releases/0.1.0.0.md).
 
 A portable, offline Windows application for personal finances across multiple bank accounts. English interface, magenta Office-style ribbon, Rupiah amounts (**Rp 1,250,000.00**), and dates in **MM/DD/YYYY**.
 
 [Repository](https://github.com/Rhahee/piggy-piggy) · [Releases](https://github.com/Rhahee/piggy-piggy/releases) · [Verification](docs/VERIFICATION.md) · [Release guide](docs/RELEASING.md)
+
+## Update 0.1.0.2 — Minor Fix
+
+Update ini merapikan ribbon, alignment tabel, penanda interaksi dan pesan tabel kosong, serta memperbaiki bulan date picker dan sorting saat pencarian. Ctrl+F langsung memfokuskan pencarian setelah halaman siap. Lihat [catatan perubahan](RELEASE_NOTES.md).
 
 ## Update 0.1.0.1 — Minor Fix
 

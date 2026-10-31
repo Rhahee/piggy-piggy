@@ -71,3 +71,15 @@ After channel promotion, the production `ReleaseChecker.CheckChannelAsync` retur
 Alternate DPI/multiple monitors, taskbars on other screen edges, real-user financial documents, very large production datasets and live update installation require separate coverage. Native window behavior may vary by Windows version, theme and Snap settings. Automated checks do not replace inspection of the final portable EXE.
 
 Screenshots, fictional documents and local test artifacts remain outside Git. The original project and private financial documents remain in their existing locations.
+
+## Local visual polish — 0.1.0.2 (unreleased)
+
+On **2026-10-31**, all **40 isolated WPF checks** passed after the visual changes. Self-contained Windows x64 publishing succeeded. Native inspection confirmed square consistent ribbon commands, right-aligned Amount headers and values, centered ledger icons, the centered empty Transactions message, and a populated fictional format-9 document with eight transactions. A selected row used the stronger magenta tint while its current cell displayed a separate focus outline. No financial document was saved during inspection.
+
+The empty-table overlay is bound to the production grid's HasItems, so search refreshes can show or hide it without rebuilding the workspace. Ribbon and ordinary button focus decoration no longer changes padding or border measurement. Existing font sizes, financial logic, document format and updater epoch remain unchanged. This scope does not include the separately identified date-picker month and sorting-on-search issues. No release, push or channel promotion was performed for this local build.
+
+## Pre-release fixes — 0.1.0.2 (unreleased)
+
+On **2026-10-31**, **435 core checks and 44 isolated WPF checks** passed. New tests open the production calendar popup and verify its historical input month, reopening after year/month navigation, and blank/invalid text preservation. Search tests cover ascending/descending numeric sorting, column arrows, empty-result recovery and empty-message visibility. A shown 1000 × 640 workspace verifies Ctrl+F focus and empty-message bounds. The focus timing failure found during that check was corrected by deferring focus until the rendered input is ready; the regression check now passes. The core suite covers Save/Open and now explicitly checks a simulated epoch-3 update from 0.1.0.1 to 0.1.0.2, plus equal/older-version rejection.
+
+A fresh self-contained Windows x64 EXE published successfully and launched with the approved identity and version 0.1.0.2. Live update replacement/restart and alternate DPI/multiple-monitor tests remain pending; the public channel is still 0.1.0.1. No release or remote changes were made in this pre-release pass.

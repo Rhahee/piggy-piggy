@@ -93,7 +93,34 @@ public static class Ui
         style.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
         style.Setters.Add(new Setter(FrameworkElement.ToolTipProperty, new Binding(path) { Converter = new LedgerTooltipConverter() }));
         if (money) style.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, TextAlignment.Right));
-        return new DataGridTextColumn { Header = label, Binding = new Binding(path), Width = new DataGridLength(width, DataGridLengthUnitType.Star), MinWidth = money ? 160 : 100, ElementStyle = style };
+        var header = new Style(typeof(DataGridColumnHeader), (Style)Application.Current.FindResource(typeof(DataGridColumnHeader)));
+        if (money) header.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty, HorizontalAlignment.Right));
+        return new DataGridTextColumn { Header = label, HeaderStyle = header, Binding = new Binding(path), Width = new DataGridLength(width, DataGridLengthUnitType.Star), MinWidth = money ? 160 : 100, ElementStyle = style };
+    }
+    public static void RefreshLedger(DataGrid table, System.Collections.IEnumerable rows)
+    {
+        var sorting = table.Items.SortDescriptions.ToArray();
+        var arrows = table.Columns.Select(column => column.SortDirection).ToArray();
+        table.ItemsSource = rows;
+        using (table.Items.DeferRefresh())
+        {
+            table.Items.SortDescriptions.Clear();
+            foreach (var sort in sorting) table.Items.SortDescriptions.Add(sort);
+        }
+        for (var i = 0; i < arrows.Length; i++) table.Columns[i].SortDirection = arrows[i];
+    }
+    public static Grid LedgerSurface(DataGrid table, string title, string message)
+    {
+        var surface = new Grid { MinHeight = 160 }; surface.Children.Add(table);
+        var text = Stack(); text.VerticalAlignment = VerticalAlignment.Center;
+        var heading = Text(title,14,Ink,true); heading.TextAlignment = TextAlignment.Center;
+        var detail = Text(message,13,Muted); detail.TextAlignment = TextAlignment.Center; detail.Margin = new Thickness(0,8,0,0);
+        text.Children.Add(heading); text.Children.Add(detail);
+        var empty = new Border { Child = text, Background = Brushes.White, Padding = new Thickness(24), Margin = new Thickness(13,33,13,1), IsHitTestVisible = false };
+        var visibility = new Style(typeof(Border)); visibility.Setters.Add(new Setter(UIElement.VisibilityProperty,Visibility.Collapsed));
+        var noRows = new DataTrigger { Binding = new Binding("HasItems") { Source = table }, Value = false };
+        noRows.Setters.Add(new Setter(UIElement.VisibilityProperty,Visibility.Visible)); visibility.Triggers.Add(noRows); empty.Style = visibility;
+        surface.Children.Add(empty); return surface;
     }
     public static DataGridTemplateColumn TypeColumn()
     {

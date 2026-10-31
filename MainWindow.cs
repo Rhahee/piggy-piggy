@@ -40,7 +40,7 @@ public sealed partial class MainWindow : Window
         CommandBinding Bind(RoutedCommand command, Action action, Func<bool>? enabled = null) { var binding = new CommandBinding(command, (_, _) => action(), (_, e) => e.CanExecute = enabled?.Invoke() ?? true); CommandBindings.Add(binding); return binding; }
         Bind(ApplicationCommands.New, NewDocument); Bind(ApplicationCommands.Open, OpenDocument); Bind(ApplicationCommands.Save, () => Save(), () => hasDocument); Bind(ApplicationCommands.SaveAs, () => Save(true), () => hasDocument);
         InputBindings.Add(new KeyBinding(ApplicationCommands.SaveAs, Key.S, ModifierKeys.Control | ModifierKeys.Shift));
-        Bind(ApplicationCommands.Find, () => { page = "Transactions"; backstage = false; Render(); searchBox?.Focus(); }, () => hasDocument);
+        Bind(ApplicationCommands.Find, () => { page = "Transactions"; backstage = false; Render(); FocusSearch(); }, () => hasDocument);
         Closing += OnClosing;
         Closed += (_,_) => updates.Dispose();
         Render();
@@ -114,12 +114,13 @@ public sealed partial class MainWindow : Window
                 b.HorizontalContentAlignment = HorizontalAlignment.Center; b.VerticalContentAlignment = VerticalAlignment.Center;
                 if (b.Content is StackPanel command)
                 {
-                    command.HorizontalAlignment = HorizontalAlignment.Center; command.VerticalAlignment = VerticalAlignment.Center;
-                    if (command.Children.OfType<Image>().FirstOrDefault() is Image icon) icon.Margin = new Thickness(0,0,0,4);
+                    command.Width = 64; command.HorizontalAlignment = HorizontalAlignment.Center; command.VerticalAlignment = VerticalAlignment.Center;
+                    if (command.Children.OfType<Image>().FirstOrDefault() is Image icon) { icon.Width = icon.Height = 32; icon.HorizontalAlignment = HorizontalAlignment.Center; icon.Margin = new Thickness(0,0,0,4); }
                     if (command.Children.OfType<TextBlock>().FirstOrDefault() is TextBlock labelText)
                     {
-                        labelText.FontSize = 8.0 * 96 / 72; labelText.MaxWidth = 64; labelText.Height = double.NaN;
+                        labelText.FontSize = 8.0 * 96 / 72; labelText.Width = 64; labelText.Height = 16;
                         labelText.Margin = new Thickness(0); labelText.TextWrapping = TextWrapping.NoWrap; labelText.TextAlignment = TextAlignment.Center;
+                        labelText.TextTrimming = TextTrimming.CharacterEllipsis; b.ToolTip = labelText.Text; AutomationProperties.SetName(b,labelText.Text);
                     }
                 }
                 row.Children.Add(b);
@@ -148,7 +149,7 @@ public sealed partial class MainWindow : Window
         {
             Group("Transactions", Ui.IconButton("add", "Income", () => EditTransaction(TransactionKind.Income), Ui.Green), Ui.IconButton("subtract", "Expense", () => EditTransaction(TransactionKind.Expense), Ui.Red), Ui.IconButton("arrow_swap", "Transfer", () => EditTransaction(TransactionKind.Transfer), Ui.Accent));
             editButton = Ui.IconButton("edit", "Edit", EditSelected, Ui.Brush("#2167B1")); deleteButton = Ui.IconButton("delete", "Delete", DeleteSelected, Ui.Accent); Group("Edit", editButton, deleteButton);
-            Group("Find", Ui.IconButton("search", "Search", () => { page = "Transactions"; Render(); searchBox?.Focus(); }, Ui.Brush("#2167B1")), Ui.IconButton("filter", "Filter", ShowFilters));
+            Group("Find", Ui.IconButton("search", "Search", () => { page = "Transactions"; Render(); FocusSearch(); }, Ui.Brush("#2167B1")), Ui.IconButton("filter", "Filter", ShowFilters));
         }
         else if (ribbonTab == "Data")
         {
@@ -237,8 +238,8 @@ public sealed partial class MainWindow : Window
             { var row = new DockPanel { Margin = new Thickness(0,16,0,0) }; var money = Ui.Text(Display.Money(amount),16,color,true); DockPanel.SetDock(money,Dock.Right); row.Children.Add(money); row.Children.Add(Ui.Text(label,14)); summary.Children.Add(row); }
             var summaryBorder = new Border { BorderBrush = Ui.Line, BorderThickness = new Thickness(1,0,0,0), Child = summary }; Grid.SetColumn(summaryBorder,1); top.Children.Add(summaryBorder); stack.Children.Add(new Border { Child = top, Padding = new Thickness(12), BorderBrush = Ui.Line, BorderThickness = new Thickness(0,0,0,1) });
             var recent = Ui.Stack(); recent.Margin = new Thickness(0); var recentTitle = Ui.Text("Recent Transactions",18,bold:true); recentTitle.Margin = new Thickness(12); recent.Children.Add(recentTitle);
-            var grid = MakeLedger(false); var recentRows = Rows(false).Take(5).ToList(); grid.ItemsSource = recentRows; grid.Height = 34 + 32 * Math.Max(1,recentRows.Count); recent.Children.Add(grid);
-            if (!Rows(false).Any()) { var note = Ui.Text("No transactions in this period. Use Income, Expense, or Transfer to add one.",14,Ui.Muted); note.Margin = new Thickness(0,16,0,0); recent.Children.Add(note); } stack.Children.Add(recent);
+            var grid = MakeLedger(false); var recentRows = Rows(false).Take(5).ToList(); grid.ItemsSource = recentRows; grid.Height = recentRows.Count == 0 ? 160 : 34 + 32 * recentRows.Count;
+            recent.Children.Add(Ui.LedgerSurface(grid,"No transactions in this period","Choose another period or add an Income, Expense, or Transfer.")); stack.Children.Add(recent);
         }
         outer.Children.Add(new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }); return outer;
     }
@@ -279,11 +280,18 @@ public sealed partial class MainWindow : Window
         bankCombo.SelectionChanged += (_, _) => { selectedBank = (bankCombo.SelectedItem as BankChoice)?.Id; Render(); }; DockPanel.SetDock(bankCombo,Dock.Left); filters.Children.Add(bankCombo);
         var clear = Ui.Button("Clear Filters", () => { search = ""; typeFilter = "All types"; categoryFilter = null; purposeFilter = null; selectedBank = null; debtTrackingFilter="All transactions"; Render(); }); clear.Margin = new Thickness(4,0,0,0); DockPanel.SetDock(clear,Dock.Right); filters.Children.Add(clear);
         searchBox = new TextBox { Text = search, ToolTip = "Search transactions (Ctrl+F)", VerticalContentAlignment = VerticalAlignment.Center };
-        searchBox.TextChanged += (_, _) => { search = searchBox.Text; if (ledger is not null) ledger.ItemsSource = Rows(true); };
+        searchBox.TextChanged += (_, _) => { search = searchBox.Text; if (ledger is not null) Ui.RefreshLedger(ledger,Rows(true)); };
         filters.Children.Add(searchBox); DockPanel.SetDock(filters,Dock.Top); outer.Children.Add(filters);
         if (typeFilter != "All types" || categoryFilter is not null || purposeFilter is not null||debtTrackingFilter!="All transactions") { var note = Ui.Text("Filter: " + typeFilter + (categoryFilter is Guid id ? " · " + session.Document.CategoryName(id) : "") + (purposeFilter is Guid purpose ? " · Purpose: " + session.Document.PurposeName(purpose) : "")+(debtTrackingFilter!="All transactions"?" · "+debtTrackingFilter:""),12,Ui.Accent); note.Margin = new Thickness(0,0,0,12); DockPanel.SetDock(note,Dock.Top); outer.Children.Add(note); }
         var hint = Ui.Text("Select a row to edit or delete. Admin Fee rows are linked to their original transaction.",12,Ui.Muted); hint.Margin = new Thickness(12,8,12,8); DockPanel.SetDock(hint,Dock.Bottom); outer.Children.Add(hint);
-        ledger = MakeLedger(true); ledger.ItemsSource = Rows(true); outer.Children.Add(ledger); return outer;
+        ledger = MakeLedger(true); ledger.ItemsSource = Rows(true); outer.Children.Add(Ui.LedgerSurface(ledger,"No transactions to display","Choose another period or adjust your search and filters.")); return outer;
+    }
+    private void FocusSearch()
+    {
+        var target = searchBox;
+        Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input,new Action(() => {
+            if (ReferenceEquals(searchBox,target) && target is { IsVisible:true }) target.Focus();
+        }));
     }
     private sealed record BankChoice(Guid? Id,string Name);
     private void ShowFilters()
