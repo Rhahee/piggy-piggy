@@ -1,12 +1,12 @@
-# Verification — 0.1.0.1
+# Verification — 0.1.0.2
 
 ## Baseline scope
 
-The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.1.0.1**, update epoch **3**, and document format **9**.
+The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.1.0.2**, update epoch **3**, and document format **9**.
 
 ## Automated checks
 
-The current suite contains **433 core checks** and **40 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, format-1–8 compatibility, format-9 Wishlist/Debt links, reservations, debt repayments and corrections, persistent report periods, compact accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering. The 20 new WPF cases cover validation focus, scrolling, cancellation without staged data, and blank opening balances.
+The current suite contains **435 core checks** and **44 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, format-1–8 compatibility, format-9 Wishlist/Debt links, reservations, debt repayments and corrections, persistent report periods, compact accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering. The 20 new WPF cases cover validation focus, scrolling, cancellation without staged data, and blank opening balances.
 
 The WPF checks instantiate production controls in an isolated STA process. They check behavior and measurement, not rendered pixels. Update HTTP cases use simulated responses unless a live check is explicitly recorded.
 
@@ -83,3 +83,11 @@ The empty-table overlay is bound to the production grid's HasItems, so search re
 On **2026-10-31**, **435 core checks and 44 isolated WPF checks** passed. New tests open the production calendar popup and verify its historical input month, reopening after year/month navigation, and blank/invalid text preservation. Search tests cover ascending/descending numeric sorting, column arrows, empty-result recovery and empty-message visibility. A shown 1000 × 640 workspace verifies Ctrl+F focus and empty-message bounds. The focus timing failure found during that check was corrected by deferring focus until the rendered input is ready; the regression check now passes. The core suite covers Save/Open and now explicitly checks a simulated epoch-3 update from 0.1.0.1 to 0.1.0.2, plus equal/older-version rejection.
 
 A fresh self-contained Windows x64 EXE published successfully and launched with the approved identity and version 0.1.0.2. Live update replacement/restart and alternate DPI/multiple-monitor tests remain pending; the public channel is still 0.1.0.1. No release or remote changes were made in this pre-release pass.
+
+## Published update — 0.1.0.2
+
+On **2026-10-31**, [app-v0.1.0.2](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.0.2) was published from **b64c3542d5982f9a0bd8d8925654eea389cca1ec**. Main CI and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/41214029557) succeeded; tag logs confirmed **435 core checks and 44 isolated WPF checks**. The downloaded ZIP matched its checksum asset and GitHub digest:
+
+`f6e4bdd33e2246006de6bbfea1fb3904cc3701b186e562641dad6250832e11b5`
+
+The exact packaged EXE reported FileVersion **0.1.0.2** and the tagged commit in ProductVersion; EXE SHA-256 was `c6a37784496118a276f8b1a64318e74837f6f6a04de8290c4c82dcd001284891`. Native inspection confirmed startup identity/version, square ribbon commands, the centered empty Transactions message and Ctrl+F caret in the search field. Only the isolated release copy was exercised; no real financial document was opened. The verified draft assets were published without replacement, then the generation-3 channel was promoted. A full in-place updater replacement/restart remains outside this check.
