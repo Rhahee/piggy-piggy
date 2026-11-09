@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Data;
 using System.Windows.Automation;
+using System.Windows.Input;
 using System.Windows.Controls.Primitives;
 using System.Xml.Linq;
 using MyPiggyBank.Core;
@@ -111,7 +112,7 @@ public static class Ui
     }
     public static Grid LedgerSurface(DataGrid table, string title, string message)
     {
-        var surface = new Grid { MinHeight = 160 }; surface.Children.Add(table);
+        var surface = new Grid(); surface.Children.Add(table);
         var text = Stack(); text.VerticalAlignment = VerticalAlignment.Center;
         var heading = Text(title,14,Ink,true); heading.TextAlignment = TextAlignment.Center;
         var detail = Text(message,13,Muted); detail.TextAlignment = TextAlignment.Center; detail.Margin = new Thickness(0,8,0,0);
@@ -121,6 +122,39 @@ public static class Ui
         var noRows = new DataTrigger { Binding = new Binding("HasItems") { Source = table }, Value = false };
         noRows.Setters.Add(new Setter(UIElement.VisibilityProperty,Visibility.Visible)); visibility.Triggers.Add(noRows); empty.Style = visibility;
         surface.Children.Add(empty); return surface;
+    }
+    public static ScrollViewer WorkspaceViewport(UIElement content)
+    {
+        var frame = new Grid { MinWidth = 600, ClipToBounds = true };
+        frame.Children.Add(content);
+        var viewport = new ScrollViewer { Content = frame, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        // Keep split panes bounded while allowing their minimum workspace width
+        // to scroll horizontally on a high-DPI screen.
+        frame.SetBinding(FrameworkElement.WidthProperty, new Binding(nameof(FrameworkElement.ActualWidth)) { Source = viewport });
+        return viewport;
+    }
+    public static void ScrollWithWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (e.Handled || e.Delta == 0 || Keyboard.Modifiers != ModifierKeys.None || SystemParameters.WheelScrollLines == 0) return;
+        var ancestors = new List<DependencyObject>();
+        for (var node = e.OriginalSource as DependencyObject; node is not null;
+            node = node is Visual ? VisualTreeHelper.GetParent(node) : LogicalTreeHelper.GetParent(node)) ancestors.Add(node);
+        // Preserve native selector/dropdown behavior.
+        if (ancestors.OfType<ComboBox>().Any()) return;
+        foreach (var viewer in ancestors.OfType<ScrollViewer>())
+        {
+            if (viewer.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled || viewer.ScrollableHeight <= 0) continue;
+            if (e.Delta > 0 ? viewer.VerticalOffset <= 0 : viewer.VerticalOffset >= viewer.ScrollableHeight) continue;
+            e.Handled = true;
+            if (SystemParameters.WheelScrollLines < 0) { if (e.Delta > 0) viewer.PageUp(); else viewer.PageDown(); }
+            else
+            {
+                var lines = Math.Max(1, Math.Abs(e.Delta) / Mouse.MouseWheelDeltaForOneLine) * SystemParameters.WheelScrollLines;
+                for (var line = 0; line < lines; line++) { if (e.Delta > 0) viewer.LineUp(); else viewer.LineDown(); }
+            }
+            return;
+        }
     }
     public static DataGridTemplateColumn TypeColumn()
     {

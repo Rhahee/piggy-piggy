@@ -37,10 +37,10 @@ public sealed partial class MainWindow : Window
         Width = Math.Min(1360, SystemParameters.WorkArea.Width - 48); Height = Math.Min(940, SystemParameters.WorkArea.Height - 48);
         MinWidth = Math.Min(1000, SystemParameters.WorkArea.Width); MinHeight = Math.Min(640, SystemParameters.WorkArea.Height); WindowStartupLocation = WindowStartupLocation.CenterScreen;
         WindowStyle = WindowStyle.SingleBorderWindow; ResizeMode = ResizeMode.CanResize;
-        // Keep the workspace usable when a high-DPI monitor has less logical space.
-        body.MinWidth = 960; body.MinHeight = 560;
-        Content = root; root.Children.Add(new ScrollViewer { Content = body,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+        // Navigation stays outside every scrolling page. A bounded table can
+        // virtualize rows and handle the wheel instead of growing the window.
+        Content = root; root.Children.Add(body);
+        body.PreviewMouseWheel += Ui.ScrollWithWheel;
         void ScheduleFit()
         {
             if (fittingWindow) return;
@@ -97,8 +97,10 @@ public sealed partial class MainWindow : Window
         var tabs = Ui.Stack(Orientation.Horizontal); tabs.Background = Ui.Brush("#F5F5F8");
         foreach (var label in new[] { "Overview", "Transactions", "Wishlist", "Debt" }) { var name = label; var b = Ui.Button(label, () => { page = name; Render(); }); b.Margin = new Thickness(0); b.Padding = new Thickness(20,8,20,8); b.FontSize = 12; Ui.SelectNavigation(b,page == name); tabs.Children.Add(b); }
         DockPanel.SetDock(tabs, Dock.Bottom); layout.Children.Add(tabs);
-        var side = BuildSidebar(); DockPanel.SetDock(side, Dock.Left); layout.Children.Add(side);
-        var workspace = page == "Overview" ? Overview() : page == "Wishlist" ? WishlistPage() : page=="Debt"?DebtPage():TransactionsPage(); layout.Children.Add(workspace); body.Content = layout;
+        var side = new ScrollViewer { Content = BuildSidebar(), Width = 200, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        DockPanel.SetDock(side, Dock.Left); layout.Children.Add(side);
+        var workspace = page == "Overview" ? Overview() : page == "Wishlist" ? WishlistPage() : page=="Debt"?DebtPage():TransactionsPage();
+        layout.Children.Add(page is "Wishlist" or "Debt" ? Ui.WorkspaceViewport(workspace) : workspace); body.Content = layout;
         if (editButton is not null) editButton.IsEnabled = false; if (deleteButton is not null) deleteButton.IsEnabled = false;
     }
     private UIElement StartPage()
@@ -283,13 +285,19 @@ public sealed partial class MainWindow : Window
     }
     private DataGrid MakeLedger(bool full)
     {
-        var grid = new DataGrid { Margin = new Thickness(12,0,12,0) }; grid.Columns.Add(new DataGridTextColumn { Header = "Date", Binding = new System.Windows.Data.Binding("Date"), SortMemberPath = "SortDate", Width = 120 }); grid.Columns.Add(Ui.TypeColumn());
-        grid.Columns.Add(Ui.Column("Bank Account","Bank",1.2)); if (full) grid.Columns.Add(Ui.Column("Category","Category",1)); grid.Columns.Add(Ui.Column("Description","Description",2.4));
+        // Star widths plus frozen columns can oscillate after a DPI round trip
+        // when WPF rounds every measure to device pixels.
+        var grid = new DataGrid { Margin = new Thickness(12,0,12,0), FrozenColumnCount = 1, UseLayoutRounding = false };
+        var date = Ui.Column("Date", "Date", 1); date.SortMemberPath = "SortDate"; date.Width = 120; date.MinWidth = date.MaxWidth = 120;
+        grid.Columns.Add(date); grid.Columns.Add(Ui.TypeColumn());
+        var bank = Ui.Column("Bank Account", "Bank", 1.4); bank.MinWidth = 160; grid.Columns.Add(bank);
+        if (full) { var category = Ui.Column("Category", "Category", 1.1); category.MinWidth = 144; grid.Columns.Add(category); }
+        var description = Ui.Column("Description", "Description", 2.8); description.MinWidth = 220; grid.Columns.Add(description);
         if (full)
         {
             grid.Columns.Add(Ui.AllocationColumn()); grid.Columns.Add(Ui.DebtColumn());
         }
-        var amount = Ui.Column("Amount","Amount",1.2,true); amount.SortMemberPath = "NumericAmount"; grid.Columns.Add(amount);
+        var amount = Ui.Column("Amount","Amount",1.5,true); amount.MinWidth = 184; amount.SortMemberPath = "NumericAmount"; grid.Columns.Add(amount);
         grid.SelectionChanged += (_, _) => { if (editButton is not null) editButton.IsEnabled = ledger?.SelectedItem is LedgerRow; if (deleteButton is not null) deleteButton.IsEnabled = ledger?.SelectedItem is LedgerRow; };
         if (full) grid.MouseDoubleClick += (_, e) => { var d = e.OriginalSource as DependencyObject; while (d is not null && d is not DataGridRow) d = VisualTreeHelper.GetParent(d); if (d is DataGridRow) EditSelected(); };
         return grid;

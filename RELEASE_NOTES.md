@@ -1,3 +1,15 @@
+# Unreleased — Transaction layout and scrolling
+
+**Jenis perubahan: Minor Fix.** Kandidat versi berikutnya: **0.1.1.2**; belum dirilis. Versi aplikasi dan kanal publik masih **0.1.1.1**.
+
+- Tanggal transaksi tetap terlihat pada kolom pertama, termasuk saat tabel digeser horizontal.
+- Lebar kolom mengikuti ruang jendela, dengan batas minimum untuk bank, kategori, deskripsi dan nominal.
+- Ribbon, tab halaman dan status tetap di tempat; hanya isi halaman/tabel yang bergulir.
+- Scroll wheel bekerja pada tabel, halaman Overview dan daftar bank yang panjang. Pada batas tabel Overview, scroll diteruskan ke halaman.
+- Perbaikan layout tabel ketika skala layar berpindah hingga 200% dan kembali ke 100%.
+
+Validasi lokal: **448 pemeriksaan inti dan 49 WPF lulus**, serta pemeriksaan langsung scroll wheel dan maximize memakai 125 transaksi fiktif. Bukti dan batas pengujian dicatat di `docs/VERIFICATION.md`.
+
 # Piggy 0.1.1.1 — Grayscale Document Icon
 
 **Jenis perubahan: Minor Fix.** Format dokumen **9** dan updater epoch **3** dipertahankan.
