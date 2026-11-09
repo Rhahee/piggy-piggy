@@ -67,8 +67,12 @@ internal static class LedgerLayoutChecks
             ApplicationCommands.Find.Execute(null, window); await Idle(window);
             var table = Ledger(window);
             var used = table.Columns.Sum(column => column.ActualWidth);
-            Require(used >= table.ActualWidth - SystemParameters.VerticalScrollBarWidth - 5 && used <= table.ActualWidth + 2,
-                "Ledger columns leave unused blank space or overflow a wide viewport.");
+            // A CI monitor can clamp the requested window below the column minima.
+            // In that case horizontal overflow is intentional, not a layout failure.
+            var minimum = table.Columns.Sum(column => column.MinWidth);
+            Require(used >= Math.Max(minimum, table.ActualWidth - SystemParameters.VerticalScrollBarWidth - 5) - 2 &&
+                used <= Math.Max(minimum, table.ActualWidth) + 2,
+                $"Ledger columns do not fill their available width: columns={used}, viewport={table.ActualWidth}, minimum={minimum}.");
             Require(table.Columns.Single(column => Equals(column.Header, "Bank Account")).ActualWidth >= 160, "Bank column is too narrow.");
             Require(table.Columns.Single(column => Equals(column.Header, "Category")).ActualWidth >= 144, "Category column is too narrow.");
             Require(table.Columns.Single(column => Equals(column.Header, "Description")).ActualWidth >= 220, "Description column is too narrow.");

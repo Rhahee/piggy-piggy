@@ -1,12 +1,20 @@
 # Piggy
 
-**Versi: [0.1.1.1 — Grayscale Document Icon](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.1.1).**
+**Versi: [0.1.1.2 — Transaction Layout and Scrolling](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.1.2).**
 
 **Jenis perubahan: Minor Fix.** Baseline awal tetap tersedia melalui [catatan rilis 0.1.0.0](docs/releases/0.1.0.0.md).
 
 A portable, offline Windows application for personal finances across multiple bank accounts. English interface, magenta Office-style ribbon, Rupiah amounts (**Rp 1,250,000.00**), and dates in **MM/DD/YYYY**.
 
 [Repository](https://github.com/Rhahee/piggy-piggy) · [Releases](https://github.com/Rhahee/piggy-piggy/releases) · [Dokumentasi](docs/README.md) · [Verification](docs/VERIFICATION.md) · [Release guide](docs/RELEASING.md)
+
+## Update 0.1.1.2 — Minor Fix
+
+Tanggal transaksi tetap terlihat, lebar kolom mengikuti jendela, menu atas/bawah menetap, dan scroll wheel bekerja pada tabel serta halaman yang panjang. Perbaikan juga mencakup pergantian skala layar 100–200%.
+
+[Unduh portable 0.1.1.2](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.1.1.2/Piggy-Piggy-0.1.1.2-win-x64.zip) · [Unduh web installer](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.1.1.1/Piggy-Piggy-Web-Setup-win-x64.exe)
+
+Installer yang sama mengambil versi terbaru dari kanal resmi. Pengguna yang sudah memakai installer revisi 1.0.0.1 dapat memperbarui aplikasi melalui updater.
 
 ## Update 0.1.1.1 — Minor Fix
 

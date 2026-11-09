@@ -1,6 +1,6 @@
-# Unreleased — Transaction layout and scrolling
+# Piggy 0.1.1.2 — Transaction Layout and Scrolling
 
-**Jenis perubahan: Minor Fix.** Kandidat versi berikutnya: **0.1.1.2**; belum dirilis. Versi aplikasi dan kanal publik masih **0.1.1.1**.
+**Jenis perubahan: Minor Fix.** Format dokumen **9** dan updater epoch **3** dipertahankan.
 
 - Tanggal transaksi tetap terlihat pada kolom pertama, termasuk saat tabel digeser horizontal.
 - Lebar kolom mengikuti ruang jendela, dengan batas minimum untuk bank, kategori, deskripsi dan nominal.
