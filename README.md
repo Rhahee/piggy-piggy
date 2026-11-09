@@ -1,12 +1,18 @@
 # Piggy
 
-**Versi: [0.1.0.2 — Ribbon and Ledger Polish](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.0.2)**
+**Versi: [0.1.1.0 — Web Installer and Display Fixes](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.1.0)**
 
-**Jenis perubahan: Minor Fix.** Baseline awal tetap tersedia melalui [catatan rilis 0.1.0.0](docs/releases/0.1.0.0.md).
+**Jenis perubahan: Perbaikan Fitur.** Baseline awal tetap tersedia melalui [catatan rilis 0.1.0.0](docs/releases/0.1.0.0.md).
 
 A portable, offline Windows application for personal finances across multiple bank accounts. English interface, magenta Office-style ribbon, Rupiah amounts (**Rp 1,250,000.00**), and dates in **MM/DD/YYYY**.
 
 [Repository](https://github.com/Rhahee/piggy-piggy) · [Releases](https://github.com/Rhahee/piggy-piggy/releases) · [Dokumentasi](docs/README.md) · [Verification](docs/VERIFICATION.md) · [Release guide](docs/RELEASING.md)
+
+## Update 0.1.1.0 — Perbaikan Fitur
+
+[Unduh web installer Windows x64](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.1.1.0/Piggy-Piggy-Web-Setup-win-x64.exe) · [Unduh paket portable](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.1.1.0/Piggy-Piggy-0.1.1.0-win-x64.zip)
+
+Web installer mengambil versi aktif dari kanal resmi GitHub, memverifikasi paket, dan menolak downgrade. Tampilan jendela menyesuaikan area kerja monitor pada perubahan DPI. Aplikasi terpasang kini menyelaraskan nomor versi Windows setelah update; format dokumen 9 dan kanal epoch 3 tetap dipertahankan. Lihat [catatan rilis](docs/releases/0.1.1.0.md).
 
 ## Update 0.1.0.2 — Minor Fix
 
@@ -113,7 +119,7 @@ Klasifikasi perubahan dan nomor versi dikonfirmasikan sebelum rilis. Bentuk port
 
 ## Build dan pemeriksaan
 
-**Web installer Windows x64** tersedia sebagai build lokal melalui `./build-installer.ps1` dengan Inno Setup. Installer tetap mengambil paket terbaru dari kanal resmi GitHub saat dijalankan, memverifikasi SHA-256 dan versi EXE, lalu memasang aplikasi, shortcut dan uninstaller. Internet diperlukan; versi terpasang yang lebih baru menolak downgrade. Lihat [panduan installer](docs/INSTALLER.md). Paket installer belum dipublikasikan.
+**Web installer Windows x64** tersedia pada [rilis 0.1.1.0](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.1.0). Installer tetap mengambil paket terbaru dari kanal resmi GitHub saat dijalankan, memverifikasi SHA-256 dan versi EXE, lalu memasang aplikasi, shortcut dan uninstaller. Internet diperlukan; versi terpasang yang lebih baru menolak downgrade. Build lokal menggunakan `./build-installer.ps1` dengan Inno Setup; lihat [panduan installer](docs/INSTALLER.md).
 
 Memerlukan Windows x64 dan .NET SDK 10. Jalankan **./publish.ps1** untuk tes inti, pemeriksaan WPF dan build EXE portable. Parameter **-Dotnet** menerima lokasi SDK bila tidak tersedia di PATH. Hasil paket berada di **dist/**.
 

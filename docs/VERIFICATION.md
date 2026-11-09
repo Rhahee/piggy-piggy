@@ -100,3 +100,9 @@ The main window now adapts its minimum size and restored bounds to the current m
 All **435 core checks and 45 isolated WPF checks** passed. The new native-message regression exercises 96 → 120 → 144 → 192 → 96 DPI, checks physical window bounds against the monitor work area, and verifies that the status bar remains reachable through scrolling. In the isolated PerMonitorV2 harness, the 200% window that previously measured 2000 × 1280 now measures 1824 × 1044 within a 1920 × 1140 physical work area. Main-window and Transfer-dialog bounds fit at each tested scale. These transitions are simulated; the single physical monitor remains at 125%, and real mixed-DPI monitor migration remains unverified.
 
 Before this patch, a separate live portable update from the exact app-v0.1.0.1 source build to the published 0.1.0.2 completed download, EXE replacement, restart and reopening of a fictional three-transaction document. The document SHA-256 was unchanged; no real financial document was used. This verifies that published update path, not an update to this local patch. No new release or channel promotion was performed.
+
+## Release preparation — 0.1.1.0 (2026-11-09)
+
+The application version is **0.1.1.0** (Feature Fix), retaining document format 9 and update epoch 3. Local publication passed **446 core checks and 45 isolated WPF checks**, including explicit 0.1.0.2 → 0.1.1.0 availability and equal/older-version rejection. The self-contained Windows x64 EXE published successfully. The previously user-tested web installer remains byte-identical, SHA-256 `a83d9f29e1a927830b2042c4f5d9601d6ccda1272fba025f737a00cb3c748ea3`.
+
+The release is prepared with portable ZIP/checksum from tag CI plus the separately verified fixed web installer/checksum. Publication and channel promotion are performed after CI/package verification; final results are recorded below when completed.

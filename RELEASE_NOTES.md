@@ -1,13 +1,15 @@
-# Piggy 0.1.0.2 — Ribbon and Ledger Polish
+# Piggy 0.1.1.0 — Web Installer and Display Fixes
 
-**Change type: Minor Fix.** Portable Windows x64 update from 0.1.0.1; document format 9 and updater epoch 3 are retained.
+**Jenis perubahan: Perbaikan Fitur.** Pembaruan Windows x64 dari 0.1.0.2. Format dokumen **9** dan updater epoch **3** dipertahankan; dokumen keuangan yang sudah ada tetap kompatibel.
 
-- Ribbon commands retain square 72 × 72 buttons, with consistent 32 × 32 icons, a four-unit icon/label gap, and a single 16-unit label line. Tooltips and accessible names retain complete command labels.
-- Amount headers align right with numeric cells; existing centered Type, Allocation and Debt icons remain compact.
-- Buttons distinguish hover, pressed, disabled and keyboard-focus states. Focus borders are overlaid to avoid shifting content. Selected navigation uses a white focus border on magenta.
-- Ledger rows use separate hover and selection colors, with a visible keyboard-focus outline on the current cell.
-- Overview and Transactions show centered explanatory messages inside empty table bodies. Messages automatically disappear when rows become available, including after search changes.
+- **Web installer tersedia:** unduh `Piggy-Piggy-Web-Setup-win-x64.exe` untuk pemasangan per pengguna, shortcut Start Menu/Desktop opsional, dan uninstaller Windows. Internet diperlukan saat pemasangan; pengguna tidak perlu memasang .NET terpisah.
+- **Installer tetap mengikuti kanal resmi GitHub:** paket diverifikasi dengan SHA-256 dan versi EXE sebelum pemasangan. Gagal koneksi, paket rusak, dan pembatalan unduhan menghentikan persiapan tanpa menimpa aplikasi yang terpasang. Versi EXE lebih baru menolak downgrade.
+- **Perbaikan tampilan DPI:** ukuran minimum dan posisi jendela mengikuti area kerja monitor saat startup, perubahan DPI dan perpindahan monitor. Area kerja yang sempit menyediakan pengguliran agar isi dan status bar tetap terjangkau.
+- **Versi Windows diselaraskan:** startup aplikasi terpasang memperbarui nomor versi pada daftar aplikasi Windows setelah update. Pemeriksaan AppId dan lokasi EXE mencegah perubahan registrasi dari aplikasi portable di folder lain.
+- **Pemasangan ulang lebih aman:** build aplikasi ini menyediakan mutex yang dikenali installer/uninstaller. Simpan pekerjaan dan tutup Piggy sebelum memasang ulang.
 
-The font scale, financial calculations, manual Save behavior, document format 9 and updater epoch 3 remain unchanged. Date pickers now open the month/year from the input and reset stale calendar navigation on reopening. Blank or invalid date text is preserved while the calendar opens today without a stale selection. Transaction searches retain numeric/text sorting and header direction, including through empty results. Ctrl+F and the Search command focus the input after the rendered workspace is ready.
+Paket portable tetap tersedia sebagai `Piggy-Piggy-0.1.1.0-win-x64.zip`, termasuk untuk updater dalam aplikasi. Berkas `.sha256` disediakan untuk ZIP dan web installer. Web installer yang diterbitkan merupakan berkas tetap yang sebelumnya telah berhasil diuji pemasangannya oleh pengguna; versi internal installer terpisah dari versi aplikasi yang diunduh.
 
-Verification on 2026-10-31: self-contained Windows x64 publish succeeded; all 435 core checks and 44 isolated WPF checks passed. Native EXE inspection covered empty and populated tables, ribbon labels, and selected/focused ledger cells using fictional data. The 1000 × 640 workspace and Ctrl+F focus were checked in WPF. Update detection from 0.1.0.1 to 0.1.0.2 passed with simulated channel/release responses; a live install/restart is still pending publication. Alternate DPI and multiple-monitor coverage remain pending. The public update channel is promoted only after the verified release assets are published.
+Validasi mencakup pemeriksaan inti/WPF, respons kanal 0.1.0.2 → 0.1.1.0, checksum dan versi paket, serta pengujian installer terisolasi sebelumnya (koneksi gagal, pemasangan ulang, penolakan downgrade, pembatalan unduhan dan uninstall). Pengujian DPI memakai transisi tersimulasi; perpindahan monitor fisik dengan DPI berbeda dan mesin Windows bersih belum diverifikasi. Installer belum ditandatangani digital.
+
+Pemeriksaan lokal untuk versi 0.1.1.0: **446 pemeriksaan inti dan 45 pemeriksaan WPF lulus**, serta publish EXE self-contained Windows x64 berhasil. Verifikasi paket CI dan kanal publik dicatat pada `docs/VERIFICATION.md`.

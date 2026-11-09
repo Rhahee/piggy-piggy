@@ -10,6 +10,7 @@
 | [Identitas visual](BRANDING.md) | Logo, ikon dan panduan aset |
 | [Catatan perubahan](../RELEASE_NOTES.md) | Perubahan pada versi aplikasi |
 | [Baseline 0.1.0.0](releases/0.1.0.0.md) | Catatan rilis awal |
+| [Rilis 0.1.1.0](releases/0.1.1.0.md) | Web installer, perbaikan DPI dan versi Windows |
 | [Review preview installer](reviews/2026-11-09-installer-preview.md) | Laporan historis sebelum beralih ke web installer |
 
 Paket distribusi, dokumen `.mpb`, cache build dan bukti QA lokal tidak disimpan di Git. Nomor versi di sumber lokal tidak otomatis berarti perubahan tersebut sudah diterbitkan; rilis publik yang diikuti aplikasi ditentukan oleh `update-channel.json` di GitHub.

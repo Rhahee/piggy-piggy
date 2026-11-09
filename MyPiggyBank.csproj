@@ -9,7 +9,7 @@
     <RootNamespace>MyPiggyBank</RootNamespace>
     <Product>Piggy</Product>
     <Title>Piggy</Title>
-    <Version>0.1.0.2</Version>
+    <Version>0.1.1.0</Version>
     <UpdateEpoch>3</UpdateEpoch>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets/app.ico</ApplicationIcon>

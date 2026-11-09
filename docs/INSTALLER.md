@@ -46,6 +46,6 @@ Log lokal: `qa/web-installer/integration-results.log`, `cancellation-result.log`
 
 Pada **9 November 2026**, pengguna juga melaporkan pemasangan melalui web installer berhasil. Laporan ini mengonfirmasi pemasangan di komputernya; belum merupakan pengujian seluruh skenario Windows. Paket preview lama beserta checksum disimpan di `dist/archive/installer-preview-2026-11-09/`, terpisah dari web installer aktif.
 
-Pada pemeriksaan langsung, kanal publik masih menunjuk **app-v0.1.0.2**. Installer mengunduh paket publik itu, bukan perubahan aplikasi yang belum dirilis di checkout lokal. Perbaikan startup untuk sinkronisasi versi Windows dan mutex baru akan ikut tersedia bagi pengguna setelah rilis aplikasi berikutnya.
+Pada pengujian awal sebelum rilis 0.1.1.0, kanal publik menunjuk **app-v0.1.0.2**. Rilis [0.1.1.0](releases/0.1.1.0.md) menyediakan paket web installer sebagai aset unduhan dan memasukkan perbaikan startup untuk sinkronisasi versi Windows serta mutex. Installer yang sama mengikuti versi aktif di kanal setelah promosi rilis.
 
-Pemeriksaan mesin Windows bersih, akun standar terpisah, proxy perusahaan, SmartScreen dan interupsi daya belum dilakukan. Installer belum ditandatangani digital. Distribusi publik/CI installer belum diaktifkan.
+Pemeriksaan mesin Windows bersih, akun standar terpisah, proxy perusahaan, SmartScreen dan interupsi daya belum dilakukan. Installer belum ditandatangani digital. Build installer di CI belum diaktifkan; aset installer tetap yang telah diverifikasi diunggah terpisah ke rilis 0.1.1.0.
