@@ -172,3 +172,17 @@ A self-contained Windows x64 build succeeded at `qa/ledger-scroll-fix/app/Piggy 
 ## Release preparation — 0.1.1.2
 
 The user authorized publishing the transaction layout/scrolling fix as **0.1.1.2 (Minor Fix)**. The local release build passed **448 core checks and 49 WPF checks**, then produced a self-contained Windows x64 portable ZIP. Main CI for the earlier fix commit revealed that a small runner monitor clamps the requested wide test window; the width assertion now checks the greater of available space and column minimum widths, allowing intentional horizontal overflow while still rejecting unused space. Production behavior is unchanged by that test correction. Document format **9**, update epoch **3**, and web installer revision **1.0.0.1** remain unchanged. Publication and live-channel results are recorded after verification below.
+
+## Published release — 0.1.1.2
+
+[app-v0.1.1.2](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.1.2) was published from **18eed8e2cb3cf8e1b8a473225f937a8dc60e3879**. [Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/42624121914) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/42624176797) succeeded. Tag logs confirmed **448 core checks and 49 WPF checks**, including the monitor-aware column-width assertion.
+
+The draft ZIP/checksum were downloaded from GitHub and matched their asset digests. The production installer staging code verified the checksum, three-file package contract and EXE version. The EXE reported **0.1.1.2+18eed8e2cb3cf8e1b8a473225f937a8dc60e3879**. The same installer revision 1.0.0.1 and its original checksum were attached without rebuilding or modifying the binary.
+
+- Portable ZIP SHA-256: `95cc057b5d82b5fb3300157c2995210743ff4c044504b52dc19b104769adb097`.
+- Packaged EXE SHA-256: `4da9b3cbc080180b7405920bdb3a07500b50776313ab74f61366cb7290e18191`.
+- Web installer SHA-256: `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`.
+
+Native inspection of the exact GitHub package confirmed the transaction date column, column sizing, and mouse-wheel row scrolling while navigation stayed pinned. A fictional 125-transaction document also passed Save/Open with identical canonical bytes; its SHA-256 remained `009f55a09fa21bc4bb55c1ba949bfb2acf2f906c5389baf98a0f93317715e3cf` after native inspection. No real financial document or installed user application was opened or modified.
+
+The release was published as GitHub Latest before channel promotion in **54d707f**. Anonymous public downloads of both checksum assets matched the verified copies. Once GitHub raw-channel propagation completed, production checks returned **Available → 0.1.1.2** for installed versions **0.1.1.0** and **0.1.1.1**, **UpToDate** for **0.1.1.2**, and the web installer resolver selected **0.1.1.2**. This verifies live discovery/resolution; a fresh install and complete in-place replacement/restart were not repeated for this release. Evidence is retained under `qa/release-0.1.1.2/`.
