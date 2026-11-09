@@ -4,10 +4,23 @@ using System.Windows.Interop;
 
 namespace MyPiggyBank;
 
-// Dialog sizing uses the current monitor's work area in WPF units.
-// Native Windows chrome handles main-window resizing and maximization.
+// Window sizing uses the current monitor's work area in WPF units.
 internal static class WindowBounds
 {
+    public static void FitMainWindow(Window window)
+    {
+        var area = WorkArea(window);
+        var width = Math.Max(1, area.Width - 48);
+        var height = Math.Max(1, area.Height - 48);
+        window.MinWidth = Math.Min(1000, width);
+        window.MinHeight = Math.Min(640, height);
+        if (window.WindowState != WindowState.Normal) return;
+        window.Width = Math.Min(window.ActualWidth, width);
+        window.Height = Math.Min(window.ActualHeight, height);
+        window.Left = Math.Clamp(window.Left, area.Left, area.Right - window.Width);
+        window.Top = Math.Clamp(window.Top, area.Top, area.Bottom - window.Height);
+    }
+
     public static System.Windows.Rect WorkArea(Window window)
     {
         var handle=new WindowInteropHelper(window).Handle;var monitor=MonitorFromWindow(handle,2);

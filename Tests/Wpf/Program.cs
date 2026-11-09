@@ -158,6 +158,7 @@ internal static class Program
         });
         passed+=FormPolishChecks.Run(owner);
         passed+=DateAndSearchChecks.Run();
+        passed+=WindowSizingChecks.Run();
         owner.Close();Console.WriteLine($"All {passed} isolated WPF checks passed.");return 0;
     }
 }

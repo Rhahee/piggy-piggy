@@ -16,6 +16,7 @@ public sealed partial class MainWindow : Window
     private readonly DocumentSession session = new();
     private readonly DockPanel root = new();
     private readonly ContentControl body = new();
+    private bool fittingWindow;
     private readonly UpdateSession updates = new();
     private TextBlock status = Ui.Text("", 12, Ui.Muted);
     private bool hasDocument, backstage, updating, preparingUpdate;
@@ -34,9 +35,31 @@ public sealed partial class MainWindow : Window
     {
         Ui.ApplyWindowStyle(this);
         Width = Math.Min(1360, SystemParameters.WorkArea.Width - 48); Height = Math.Min(940, SystemParameters.WorkArea.Height - 48);
-        MinWidth = 1000; MinHeight = 640; WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        MinWidth = Math.Min(1000, SystemParameters.WorkArea.Width); MinHeight = Math.Min(640, SystemParameters.WorkArea.Height); WindowStartupLocation = WindowStartupLocation.CenterScreen;
         WindowStyle = WindowStyle.SingleBorderWindow; ResizeMode = ResizeMode.CanResize;
-        Content = root; root.Children.Add(body);
+        // Keep the workspace usable when a high-DPI monitor has less logical space.
+        body.MinWidth = 960; body.MinHeight = 560;
+        Content = root; root.Children.Add(new ScrollViewer { Content = body,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+        void ScheduleFit()
+        {
+            if (fittingWindow) return;
+            fittingWindow = true;
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() => {
+                try { if (IsLoaded) WindowBounds.FitMainWindow(this); }
+                finally { fittingWindow = false; }
+            }));
+        }
+        Loaded += (_, _) => ScheduleFit();
+        DpiChanged += (_, _) => ScheduleFit();
+        SourceInitialized += (_, _) => {
+            var source = System.Windows.Interop.HwndSource.FromHwnd(new System.Windows.Interop.WindowInteropHelper(this).Handle);
+            source?.AddHook((nint hwnd, int message, nint wparam, nint lparam, ref bool handled) => {
+                // Wait for the drag to finish so clamping does not prevent crossing monitors.
+                if (message is 0x0232 or 0x007E) ScheduleFit(); // WM_EXITSIZEMOVE / WM_DISPLAYCHANGE
+                return nint.Zero;
+            });
+        };
         CommandBinding Bind(RoutedCommand command, Action action, Func<bool>? enabled = null) { var binding = new CommandBinding(command, (_, _) => action(), (_, e) => e.CanExecute = enabled?.Invoke() ?? true); CommandBindings.Add(binding); return binding; }
         Bind(ApplicationCommands.New, NewDocument); Bind(ApplicationCommands.Open, OpenDocument); Bind(ApplicationCommands.Save, () => Save(), () => hasDocument); Bind(ApplicationCommands.SaveAs, () => Save(true), () => hasDocument);
         InputBindings.Add(new KeyBinding(ApplicationCommands.SaveAs, Key.S, ModifierKeys.Control | ModifierKeys.Shift));

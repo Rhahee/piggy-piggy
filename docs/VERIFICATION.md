@@ -6,7 +6,7 @@ The initial baseline includes bank accounts, Income/Expense/Transfer with separa
 
 ## Automated checks
 
-The current suite contains **435 core checks** and **44 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, format-1–8 compatibility, format-9 Wishlist/Debt links, reservations, debt repayments and corrections, persistent report periods, compact accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering. The 20 new WPF cases cover validation focus, scrolling, cancellation without staged data, and blank opening balances.
+The current suite contains **435 core checks** and **45 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, format-1–8 compatibility, format-9 Wishlist/Debt links, reservations, debt repayments and corrections, persistent report periods, compact accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering. The 20 new WPF cases cover validation focus, scrolling, cancellation without staged data, and blank opening balances.
 
 The WPF checks instantiate production controls in an isolated STA process. They check behavior and measurement, not rendered pixels. Update HTTP cases use simulated responses unless a live check is explicitly recorded.
 
@@ -92,3 +92,11 @@ On **2026-10-31**, [app-v0.1.0.2](https://github.com/Rhahee/piggy-piggy/releases
 
 The exact packaged EXE reported FileVersion **0.1.0.2** and the tagged commit in ProductVersion; EXE SHA-256 was `c6a37784496118a276f8b1a64318e74837f6f6a04de8290c4c82dcd001284891`. Native inspection confirmed startup identity/version, square ribbon commands, the centered empty Transactions message and Ctrl+F caret in the search field. Only the isolated release copy was exercised; no real financial document was opened. The verified draft assets were published without replacement, then the generation-3 channel was promoted. A full in-place updater replacement/restart remains outside this check.
 After promotion, the production release checker returned **Available → 0.1.0.2** for installed **0.1.0.1** with the correct checksum URL, and **UpToDate** for installed **0.1.0.2**. GitHub Latest identifies app-v0.1.0.2; a separate public download of its checksum matched the verified ZIP.
+
+## Local high-DPI window fix — 0.1.0.2 (2026-11-09)
+
+The main window now adapts its minimum size and restored bounds to the current monitor work area on startup, DPI changes and monitor moves. Smaller logical workspaces provide outer scrolling so content remains reachable. Version 0.1.0.2, document format 9 and update epoch 3 are retained.
+
+All **435 core checks and 45 isolated WPF checks** passed. The new native-message regression exercises 96 → 120 → 144 → 192 → 96 DPI, checks physical window bounds against the monitor work area, and verifies that the status bar remains reachable through scrolling. In the isolated PerMonitorV2 harness, the 200% window that previously measured 2000 × 1280 now measures 1824 × 1044 within a 1920 × 1140 physical work area. Main-window and Transfer-dialog bounds fit at each tested scale. These transitions are simulated; the single physical monitor remains at 125%, and real mixed-DPI monitor migration remains unverified.
+
+Before this patch, a separate live portable update from the exact app-v0.1.0.1 source build to the published 0.1.0.2 completed download, EXE replacement, restart and reopening of a fictional three-transaction document. The document SHA-256 was unchanged; no real financial document was used. This verifies that published update path, not an update to this local patch. No new release or channel promotion was performed.
