@@ -12,7 +12,7 @@ A portable, offline Windows application for personal finances across multiple ba
 
 Tanggal transaksi tetap terlihat, lebar kolom mengikuti jendela, menu atas/bawah menetap, dan scroll wheel bekerja pada tabel serta halaman yang panjang. Perbaikan juga mencakup pergantian skala layar 100–200%.
 
-[Unduh portable 0.1.1.2](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.1.1.2/Piggy-Piggy-0.1.1.2-win-x64.zip) · [Unduh web installer](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.1.1.1/Piggy-Piggy-Web-Setup-win-x64.exe)
+[Unduh portable 0.1.1.2](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.1.1.2/Piggy-Piggy-0.1.1.2-win-x64.zip) · [Unduh web installer](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.1.1.2/Piggy-Piggy-Web-Setup-win-x64.exe)
 
 Installer yang sama mengambil versi terbaru dari kanal resmi. Pengguna yang sudah memakai installer revisi 1.0.0.1 dapat memperbarui aplikasi melalui updater.
 
@@ -135,7 +135,7 @@ Klasifikasi perubahan dan nomor versi dikonfirmasikan sebelum rilis. Bentuk port
 
 ## Build dan pemeriksaan
 
-**Web installer Windows x64** tersedia pada [rilis 0.1.1.1](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.1.1). Installer tetap mengambil paket terbaru dari kanal resmi GitHub saat dijalankan, memverifikasi SHA-256 dan versi EXE, lalu memasang aplikasi, shortcut dan uninstaller. Internet diperlukan; versi terpasang yang lebih baru menolak downgrade. Build lokal menggunakan `./build-installer.ps1` dengan Inno Setup; lihat [panduan installer](docs/INSTALLER.md).
+**Web installer Windows x64** tersedia pada [rilis 0.1.1.2](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.1.2). Installer tetap mengambil paket terbaru dari kanal resmi GitHub saat dijalankan, memverifikasi SHA-256 dan versi EXE, lalu memasang aplikasi, shortcut dan uninstaller. Internet diperlukan; versi terpasang yang lebih baru menolak downgrade. Build lokal menggunakan `./build-installer.ps1` dengan Inno Setup; lihat [panduan installer](docs/INSTALLER.md).
 
 Memerlukan Windows x64 dan .NET SDK 10. Jalankan **./publish.ps1** untuk tes inti, pemeriksaan WPF dan build EXE portable. Parameter **-Dotnet** menerima lokasi SDK bila tidak tersedia di PATH. Hasil paket berada di **dist/**.
 
