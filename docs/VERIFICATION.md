@@ -140,3 +140,21 @@ The opt-out regression was first added to `Tests/Installer/Test-FileAssociation.
 After the fix, **37 isolated file-association checks passed**, including the original 23 cases plus pre-existing same-ProgID opt-out and owned opt-in → opt-out reinstall. The sequential local publish passed **448 core checks and 45 WPF checks**. The new channel tests cover 0.1.1.0 → 0.1.1.1 and rejection of equal/older releases. Installer revision **1.0.0.1** compiled successfully to `dist/releases/0.1.1.1/installer/`; its SHA-256 is `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`.
 
 Evidence: `qa/release-0.1.1.1/association-red.log`, `association-green.log`, `local-publish-verified.log`, and `installer-build.log`. An initial overlapping local build failed due to an output DLL lock; the subsequent sequential publish and installer build succeeded. Public release assets and channel remain untouched until the verified tag package is published; final publication results are recorded below.
+
+## Published update — 0.1.1.1 (2026-11-09)
+
+[app-v0.1.1.1](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.1.1) was published from **15bc34b1b54c557dd67cae63c7111e091fab175d**. [Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/42619219260) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/42619219263) succeeded; tag logs confirmed **448 core checks and 45 WPF checks**. The separately built installer revision 1.0.0.1 includes the ownership fix validated by **37 isolated file-association checks**.
+
+All four draft assets were downloaded from GitHub before publication, matched their GitHub digests, and the ZIP/installer matched their checksum files:
+
+- Portable ZIP SHA-256: `f227fb1080f49caca8c1f7e2e77233969b2bdecfd8bf7af0bee4cfbee64289db`.
+- Packaged EXE SHA-256: `cafbee0c5334bf12edce644117bfbed027423939c734a7df0110e628f6ee5e16`.
+- Revised web installer SHA-256: `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`.
+
+The exact packaged EXE reported **0.1.1.1** and the tagged source commit. It opened and saved the fictional three-transaction document without changing its canonical bytes. The release was published as GitHub Latest before channel promotion in **40f8663**. Anonymous public checksum downloads matched the verified assets. Production checks returned **Available → 0.1.1.1** for 0.1.1.0, **UpToDate** for 0.1.1.1, and the web installer resolver selected 0.1.1.1.
+
+A separate exact public **0.1.1.0** client then completed a live UI update: download, EXE replacement, restart, and reopening of the same fictional document. The resulting EXE hash matched the CI package and the document SHA-256 remained unchanged. User financial documents and actual `.mpb` registrations were not touched.
+
+The old public 0.1.1.0 installer remains unchanged (`a83d9f29e1a927830b2042c4f5d9601d6ccda1272fba025f737a00cb3c748ea3`). The active local `dist/installer/` now contains revision 1.0.0.1, with the old launcher preserved under `dist/archive/installer-1.0.0.0/`. Users must run the new installer once to register the grayscale document icon; EXE-only updates do not add installation/uninstallation registration rules.
+
+Evidence is retained under `qa/release-0.1.1.1/`. UserChoice UI behavior on a clean Windows machine and digital signing remain outside this verification.
