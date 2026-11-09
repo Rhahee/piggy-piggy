@@ -28,6 +28,15 @@ internal static class UpdateChannelChecks
     private static void Reject(string json){try{UpdateChannel.Parse(json);}catch(Exception e)when(e is InvalidDataException or JsonException){return;}throw new Exception("Expected invalid channel rejection");}
     public static void Run(Action<string,Action> test)
     {
+        test("published 0.1.1.0 clients can update to 0.1.1.1 in epoch 3",()=>{
+            var result=Check(new(0,1,1,0),3,Channel(3,"0.1.1.1"),Release("0.1.1.1",epoch:3));
+            Equal(UpdateStatus.Available,result.Status);Equal(new Version(0,1,1,1),result.Release!.Version);
+            Equal(false,result.Release.IsVersionTransition);Equal(true,result.Release.Checksum is not null);
+        });
+        test("0.1.1.1 rejects equal and older channel versions",()=>{
+            foreach(var version in new[]{"0.1.1.0","0.1.1.1"})
+                Equal(UpdateStatus.UpToDate,Check(new(0,1,1,1),3,Channel(3,version),Release(version,epoch:3)).Status);
+        });
         test("published 0.1.0.2 clients can update to 0.1.1.0 in epoch 3",()=>{
             var result=Check(new(0,1,0,2),3,Channel(3,"0.1.1.0"),Release("0.1.1.0",epoch:3));
             Equal(UpdateStatus.Available,result.Status);Equal(new Version(0,1,1,0),result.Release!.Version);

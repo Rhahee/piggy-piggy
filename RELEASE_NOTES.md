@@ -1,15 +1,16 @@
-# Piggy 0.1.1.0 — Web Installer and Display Fixes
+# Piggy 0.1.1.1 — Grayscale Document Icon
 
-**Jenis perubahan: Perbaikan Fitur.** Pembaruan Windows x64 dari 0.1.0.2. Format dokumen **9** dan updater epoch **3** dipertahankan; dokumen keuangan yang sudah ada tetap kompatibel.
+**Jenis perubahan: Minor Fix.** Format dokumen **9** dan updater epoch **3** dipertahankan.
 
-- **Web installer tersedia:** unduh `Piggy-Piggy-Web-Setup-win-x64.exe` untuk pemasangan per pengguna, shortcut Start Menu/Desktop opsional, dan uninstaller Windows. Internet diperlukan saat pemasangan; pengguna tidak perlu memasang .NET terpisah.
-- **Installer tetap mengikuti kanal resmi GitHub:** paket diverifikasi dengan SHA-256 dan versi EXE sebelum pemasangan. Gagal koneksi, paket rusak, dan pembatalan unduhan menghentikan persiapan tanpa menimpa aplikasi yang terpasang. Versi EXE lebih baru menolak downgrade.
-- **Perbaikan tampilan DPI:** ukuran minimum dan posisi jendela mengikuti area kerja monitor saat startup, perubahan DPI dan perpindahan monitor. Area kerja yang sempit menyediakan pengguliran agar isi dan status bar tetap terjangkau.
-- **Versi Windows diselaraskan:** startup aplikasi terpasang memperbarui nomor versi pada daftar aplikasi Windows setelah update. Pemeriksaan AppId dan lokasi EXE mencegah perubahan registrasi dari aplikasi portable di folder lain.
-- **Pemasangan ulang lebih aman:** build aplikasi ini menyediakan mutex yang dikenali installer/uninstaller. Simpan pekerjaan dan tutup Piggy sebelum memasang ulang.
+- Ikon dokumen `.mpb` memakai koin yang sama dengan ikon aplikasi dalam **grayscale**, berlatar transparan dan tersedia dalam sembilan ukuran ICO dari 16 hingga 256 piksel. Ikon aplikasi tetap emas.
+- **Web installer revisi 1.0.0.1** menyediakan pilihan registrasi `.mpb`, ikon dokumen, perintah Open dan Open With per pengguna. Pilihan aplikasi pembuka yang sudah ada dipertahankan.
+- **Bug cleanup default diperbaiki:** uninstaller kini hanya membersihkan default `.mpb` yang benar-benar dimiliki instalasi tersebut. Mematikan opsi registrasi tidak lagi menyebabkan default lama ke Piggy terhapus saat uninstall.
+- Penanda kepemilikan terikat ke folder instalasi dan dipertahankan saat pemasangan ulang dengan opsi registrasi dimatikan. Cleanup yang sah tetap berjalan, sementara pilihan pembuka yang berubah setelah pemasangan tetap aman.
 
-Paket portable tetap tersedia sebagai `Piggy-Piggy-0.1.1.0-win-x64.zip`, termasuk untuk updater dalam aplikasi. Berkas `.sha256` disediakan untuk ZIP dan web installer. Web installer yang diterbitkan merupakan berkas tetap yang sebelumnya telah berhasil diuji pemasangannya oleh pengguna; versi internal installer terpisah dari versi aplikasi yang diunduh.
+**Untuk memperoleh ikon/asosiasi `.mpb`, jalankan installer terbaru sekali.** Updater dalam aplikasi hanya mengganti EXE; ia tidak dapat menambah aturan registrasi dan uninstall pada installer lama. Jika Windows masih menyimpan pilihan pembuka lain, pilih Piggy melalui **Open With**. Dokumen keuangan tidak diubah.
 
-Validasi mencakup pemeriksaan inti/WPF, respons kanal 0.1.0.2 → 0.1.1.0, checksum dan versi paket, serta pengujian installer terisolasi sebelumnya (koneksi gagal, pemasangan ulang, penolakan downgrade, pembatalan unduhan dan uninstall). Pengujian DPI memakai transisi tersimulasi; perpindahan monitor fisik dengan DPI berbeda dan mesin Windows bersih belum diverifikasi. Installer belum ditandatangani digital.
+Aset rilis: `Piggy-Piggy-0.1.1.1-win-x64.zip`, `Piggy-Piggy-Web-Setup-win-x64.exe`, dan checksum SHA-256 untuk masing-masing paket. Installer lama di rilis 0.1.1.0 tidak diganti.
 
-Pemeriksaan lokal untuk versi 0.1.1.0: **446 pemeriksaan inti dan 45 pemeriksaan WPF lulus**, serta publish EXE self-contained Windows x64 berhasil. Verifikasi paket CI dan kanal publik dicatat pada `docs/VERIFICATION.md`.
+Uji regresi gagal pada kode lama dan **37 pemeriksaan asosiasi berkas lulus setelah perbaikan**, termasuk pencarian ikon/perintah melalui Windows Shell, default lama + opt-out, pemasangan ulang, default aplikasi lain dan pelestarian sentinel `.mpb`. Bukti pemeriksaan inti/WPF, CI dan paket publik dicatat pada `docs/VERIFICATION.md`. Pengujian memakai ekstensi/ProgID QA terpisah; Windows bersih dan pemilihan UserChoice belum diverifikasi. Installer belum ditandatangani digital.
+
+Build lokal juga lulus **448 pemeriksaan inti dan 45 WPF**, serta menghasilkan EXE portable self-contained dan installer revisi 1.0.0.1.

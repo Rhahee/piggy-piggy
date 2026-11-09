@@ -10,6 +10,14 @@ The approved mark is a smiling magenta-and-white pig eating a warm gold coin, ab
 
 The logo and coin derivative were created with the built-in imagegen tool. ICO conversion only resizes and packages the PNG; it does not redraw the artwork. Existing Fluent UI command icons keep their existing license and appearance.
 
+## Document icon — 0.1.1.1
+
+- `Assets/mpb.png`: the approved grayscale preview of the application coin, generated using built-in Imagegen from `Assets/app.png`, with transparent surroundings.
+- `Assets/mpb.ico`: matching document icon frames at 16, 20, 24, 32, 40, 48, 64, 128 and 256 pixels. Rebuild with `./tools/Build-AppIcon.ps1 -Source ./Assets/mpb.png -Destination ./Assets/mpb.ico`.
+- The application icon stays gold. Only `.mpb` documents associated with Piggy use the grayscale icon; existing Windows default choices are respected.
+
+The image edit prompt requested only a neutral grayscale recolor while preserving the original silhouette, rings, central sparkle, shading and transparent padding; no text or document-sheet badge was added. ICO conversion only packages/resizes the generated PNG.
+
 ## Startup layout and display name
 
 The start screen is one centered vertical group: **logo → New → Open**. The New and Open buttons are both 240 × 44 WPF units, with a 12-unit gap. Version and update controls remain at the bottom right. Window decorations use native Windows chrome.

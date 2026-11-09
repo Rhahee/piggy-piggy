@@ -13,6 +13,12 @@
 #ifndef InstallDir
   #define InstallDir "{localappdata}\Programs\Piggy"
 #endif
+#ifndef DocumentExtension
+  #define DocumentExtension ".mpb"
+#endif
+#ifndef DocumentProgId
+  #define DocumentProgId "Piggy.Document"
+#endif
 
 [Setup]
 AppId={{{#ProductId}}
@@ -38,18 +44,32 @@ WizardStyle=modern
 CloseApplications=no
 AppMutex=Local\Piggy-Application
 RestartApplications=no
-VersionInfoVersion=1.0.0.0
-VersionInfoProductTextVersion=1.0.0.0
+ChangesAssociations=yes
+VersionInfoVersion=1.0.0.1
+VersionInfoProductTextVersion=1.0.0.1
 UninstallDisplayName={#ProductName}
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: unchecked
+Name: "fileassociation"; Description: "Register .mpb documents with Piggy"; GroupDescription: "File associations:"
 
 [Files]
 Source: "{#HelperDir}\Piggy.Setup.Download.exe"; Flags: dontcopy
 Source: "{tmp}\payload\Piggy - Piggy.exe"; DestDir: "{app}"; Flags: external ignoreversion; BeforeInstall: BeforePayloadInstall
 Source: "{tmp}\payload\README.md"; DestDir: "{app}"; Flags: external ignoreversion
 Source: "{tmp}\payload\Fluent-Icons-LICENSE.txt"; DestDir: "{app}"; Flags: external ignoreversion
+Source: "..\Assets\mpb.ico"; DestDir: "{app}"; Flags: ignoreversion
+
+[Registry]
+Root: HKCU; Subkey: "Software\Classes\{#DocumentProgId}"; ValueType: string; ValueName: ""; ValueData: "Piggy Document"; Flags: uninsdeletekey; Tasks: fileassociation
+Root: HKCU; Subkey: "Software\Classes\{#DocumentProgId}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\mpb.ico"",0"; Tasks: fileassociation
+Root: HKCU; Subkey: "Software\Classes\{#DocumentProgId}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\Piggy - Piggy.exe"" ""%1"""; Tasks: fileassociation
+Root: HKCU; Subkey: "Software\Classes\{#DocumentExtension}\OpenWithProgids"; ValueType: string; ValueName: "{#DocumentProgId}"; ValueData: ""; Flags: uninsdeletevalue uninsdeletekeyifempty; Tasks: fileassociation
+; Do not log unconditional deletion of the default value: the user may change it later.
+Root: HKCU; Subkey: "Software\Classes\{#DocumentExtension}"; ValueType: string; ValueName: ""; ValueData: "{#DocumentProgId}"; Tasks: fileassociation; Check: CanSetDocumentDefault
+; Keep ownership across reinstalls that opt out. Capture it before uninstall
+; removes registry entries, and never infer ownership just from the ProgID.
+Root: HKCU; Subkey: "Software\Piggy\Installer\{#ProductId}"; ValueType: string; ValueName: "DocumentDefaultOwner"; ValueData: "{app}"; Flags: uninsdeletekey; Tasks: fileassociation; Check: CanSetDocumentDefault
 
 [Icons]
 Name: "{userprograms}\{#ProductName}"; Filename: "{app}\Piggy - Piggy.exe"; WorkingDir: "{app}"
@@ -62,6 +82,35 @@ Filename: "{app}\Piggy - Piggy.exe"; Description: "Launch Piggy"; Flags: nowait 
 var
   PayloadVersion: String;
   DownloadPage: TDownloadWizardPage;
+  OwnsDocumentDefault: Boolean;
+
+function CanSetDocumentDefault: Boolean;
+var
+  Existing: String;
+begin
+  // HKCR includes other per-user and machine-level registrations. UserChoice is
+  // managed by Windows; setup never reads, deletes or rewrites its protected hash.
+  Result := not RegQueryStringValue(HKCR, '{#DocumentExtension}', '', Existing);
+  if not Result then Result := (Existing = '') or (Existing = '{#DocumentProgId}');
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Existing, Owner: String;
+begin
+  if CurUninstallStep = usUninstall then begin
+    OwnsDocumentDefault := False;
+    if RegQueryStringValue(HKCU, 'Software\Piggy\Installer\{#ProductId}', 'DocumentDefaultOwner', Owner) then
+      OwnsDocumentDefault := CompareText(Owner, ExpandConstant('{app}')) = 0;
+  end;
+  if (CurUninstallStep = usPostUninstall) and OwnsDocumentDefault then begin
+    if RegQueryStringValue(HKCU, 'Software\Classes\{#DocumentExtension}', '', Existing) then
+      if Existing = '{#DocumentProgId}' then begin
+        RegDeleteValue(HKCU, 'Software\Classes\{#DocumentExtension}', '');
+        RegDeleteKeyIfEmpty(HKCU, 'Software\Classes\{#DocumentExtension}');
+      end;
+  end;
+end;
 
 function GetPayloadVersion(Param: String): String;
 begin

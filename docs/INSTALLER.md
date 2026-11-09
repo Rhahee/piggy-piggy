@@ -4,6 +4,30 @@
 
 Rilis aplikasi berikutnya tidak memerlukan build ulang installer selama protokol kanal/paket dan mekanisme pemasangan tetap kompatibel. Perbaikan installer atau perubahan protokol tetap memerlukan installer baru. Versi internal launcher `1.0.0.0` terpisah dari versi aplikasi Piggy; ini tidak menerbitkan Piggy 1.0.
 
+## Revisi 1.0.0.1 — aplikasi 0.1.1.1
+
+Revisi installer ini menambahkan `mpb.ico` grayscale dari `Assets/`, tanpa mengubah kontrak ZIP tiga berkas atau updater EXE. Tugas **Register .mpb documents with Piggy** mendaftarkan ProgID `Piggy.Document`, DefaultIcon, perintah Open yang mengutip path EXE/dokumen, dan entri Open With pada HKCU.
+
+Default untuk ekstensi hanya ditetapkan bila belum ada pemilik atau sudah menunjuk Piggy; registrasi aplikasi lain dan pilihan Windows UserChoice dipertahankan. Bila Windows telah menyimpan pilihan pembuka lain, pengguna memilih Piggy melalui Open With. Uninstaller menghapus ProgID, entri Open With dan ICO milik instalasi. Default ekstensi hanya dibersihkan jika masih menunjuk ProgID Piggy dan penanda kepemilikan menyebut folder instalasi yang sedang dicopot. Marker dicatat hanya saat tugas registrasi benar-benar mengambil default, lalu dipertahankan pada pemasangan ulang opt-out. Dokumen `.mpb` tidak dihapus.
+
+Registrasi baru memerlukan revisi installer: updater aplikasi lama hanya mengganti EXE, sehingga tidak dapat menambah aturan uninstall/asosiasi. [Unduh revisi 1.0.0.1 pada rilis aplikasi 0.1.1.1](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.1.1.1/Piggy-Piggy-Web-Setup-win-x64.exe). Installer publik 1.0.0.0 di rilis aplikasi 0.1.1.0 tetap dipertahankan. Revisi baru tetap dapat dipakai lintas rilis aplikasi selanjutnya selama mekanisme pemasangan kompatibel.
+
+Build lokal tanpa menimpa installer publik yang sudah diuji:
+
+```powershell
+.\build-installer.ps1 -OutputDirectory .\dist\releases\0.1.1.1\installer
+```
+
+Versi aplikasi yang diunduh tetap mengikuti kanal resmi. Revisi installer tidak mengganti format dokumen, nomor epoch, atau kontrak paket ZIP.
+
+Pemeriksaan asosiasi dapat dijalankan setelah build portable/helper tersedia:
+
+```powershell
+.\Tests\Installer\Test-FileAssociation.ps1
+```
+
+Skrip mengompilasi installer QA dengan ekstensi/ProgID acak dan payload lokal (tanpa mengganti kanal GitHub). Pemeriksaan mencakup pencarian ikon/perintah melalui Windows Shell, cleanup uninstall, perlindungan default lain, kasus opt-out dengan default Piggy yang sudah ada, kepemilikan pada pemasangan ulang, dan pelestarian sentinel `.mpb`. Skrip tidak menyentuh asosiasi `.mpb` pengguna. Uji ini tidak menyertakan pemilihan aplikasi pada dialog Windows UserChoice atau instalasi pada mesin bersih.
+
 ## Perilaku pemasangan
 
 - Internet diperlukan. Tidak ada fallback ke aplikasi lama yang dibundel.
@@ -14,7 +38,7 @@ Rilis aplikasi berikutnya tidak memerlukan build ulang installer selama protokol
 - Pemasangan ulang mempertahankan folder sebelumnya dan boleh memperbaiki versi yang sama. Versi EXE lebih baru di lokasi tujuan menolak downgrade, termasuk dalam mode silent.
 - Tutup Piggy sebelum memasang ulang. Build aplikasi baru memiliki mutex yang dikenali installer/uninstaller. Installer tidak memaksa menutup aplikasi atau membuang perubahan dokumen.
 - Versi di daftar aplikasi Windows diambil dari paket yang diunduh. Pada kode aplikasi baru, startup menyelaraskan DisplayVersion setelah update jika AppId dan lokasi EXE tepat cocok dengan registrasi terpasang. Aplikasi portable tidak membuat registrasi uninstall.
-- Dokumen `.mpb` tetap dibuka/disimpan melalui aplikasi; belum ada asosiasi ekstensi. Uninstaller tidak menghapus dokumen atau folder secara rekursif. Backup EXE updater dapat tersisa.
+- Pada installer 1.0.0.0, dokumen `.mpb` dibuka/disimpan melalui aplikasi tanpa registrasi ekstensi; gunakan revisi 1.0.0.1 di atas untuk registrasi baru. Uninstaller tidak menghapus dokumen atau folder secara rekursif. Backup EXE updater dapat tersisa.
 
 Jika metadata tidak tersedia, koneksi gagal, unduhan dibatalkan, checksum salah, atau versi tidak cocok, setup berhenti sebelum pemasangan payload. Kegagalan saat tahap penyalinan ditangani mekanisme installer; interupsi daya/OS belum diuji.
 

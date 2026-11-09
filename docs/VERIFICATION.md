@@ -122,3 +122,21 @@ The release was published as GitHub Latest before `update-channel.json` was prom
 A separate exact published **0.1.0.2** client then performed a full live UI update: check, download, SHA-256 verification, EXE replacement, restart and reopening of the same fictional three-transaction document. The updated EXE hash matched the CI package and the document SHA-256 remained unchanged. No real financial document or user installation was used. Physical mixed-DPI monitor migration, Windows clean-machine installation and installer signing remain outside this verification.
 
 Local evidence is retained under `qa/release-0.1.1.0/`, including CI logs, downloaded assets, package verification, live channel checks and the live update result; this evidence is ignored by Git.
+
+## Unreleased document icon — 0.1.1.1 (2026-11-09)
+
+Local application version **0.1.1.1** is prepared as a Minor Fix. `Assets/mpb.png` is the previously previewed grayscale coin and `Assets/mpb.ico` contains PNG-backed frames at 16, 20, 24, 32, 40, 48, 64, 128 and 256 pixels. The application icon remains gold. Local portable publication and the unreleased installer revision **1.0.0.1** compiled successfully; **446 core checks and 45 WPF checks passed**.
+
+`Tests/Installer/Test-FileAssociation.ps1` passed **23 isolated checks**. It compiles the production registry/uninstall rules under a random QA extension/ProgID/AppId, replacing only network preparation with the local payload. Windows `AssocQueryString` resolved both the grayscale DefaultIcon and the correctly quoted Open command. Tests covered an initially unassigned extension, a pre-existing foreign default, a default changed after installation, installed ICO hash/nine frames, registration/icon removal at uninstall, and unchanged `.mpb` sentinel bytes. QA registrations were removed afterward; the user's actual `.mpb` association was not changed.
+
+The public installer remains byte-identical (SHA-256 `a83d9f29e1a927830b2042c4f5d9601d6ccda1272fba025f737a00cb3c748ea3`), and `update-channel.json` still targets **0.1.1.0**. The unreleased installer is under `dist/unreleased/0.1.1.1/installer/`; it still downloads the active public application until a future release/channel promotion. New file-type registration requires the revised installer, since the existing application updater replaces only the EXE.
+
+Evidence is retained in `qa/mpb-icon-0.1.1.1/` and the generated `qa/file-association-*/` folder. Actual Windows UserChoice selection, Explorer visual checks on a clean machine and physical double-click dispatch were not exercised by this QA script. No release, tag or remote push was performed for 0.1.1.1.
+
+## Ownership fix and release preparation — 0.1.1.1 (2026-11-09)
+
+The opt-out regression was first added to `Tests/Installer/Test-FileAssociation.ps1` and failed on the old installer at the assertion that a pre-existing Piggy default must survive opt-out uninstall. The fix records `DocumentDefaultOwner` under an AppId-scoped installer key only when setup takes the default. Uninstall captures this marker before registry cleanup, checks the owning installation path, and removes the extension default only when both ownership and current ProgID match. An opt-out reinstall retains the original marker.
+
+After the fix, **37 isolated file-association checks passed**, including the original 23 cases plus pre-existing same-ProgID opt-out and owned opt-in → opt-out reinstall. The sequential local publish passed **448 core checks and 45 WPF checks**. The new channel tests cover 0.1.1.0 → 0.1.1.1 and rejection of equal/older releases. Installer revision **1.0.0.1** compiled successfully to `dist/releases/0.1.1.1/installer/`; its SHA-256 is `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`.
+
+Evidence: `qa/release-0.1.1.1/association-red.log`, `association-green.log`, `local-publish-verified.log`, and `installer-build.log`. An initial overlapping local build failed due to an output DLL lock; the subsequent sequential publish and installer build succeeded. Public release assets and channel remain untouched until the verified tag package is published; final publication results are recorded below.
