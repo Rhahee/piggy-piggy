@@ -19,6 +19,8 @@ The baseline retains **document format 9** and **UpdateEpoch=3**. These are inde
 
 ## Publishing
 
+The optional web installer is built separately with `build-installer.ps1`. It follows the existing update channel at install time and does not need rebuilding for each ordinary app release. Keep the exact ZIP/checksum naming and three-file payload contract in `docs/INSTALLER.md`. A new launcher is required for incompatible protocol/install changes. Do not silently replace an already published installer asset; version a changed launcher when publishing it.
+
 1. Run core tests and isolated WPF checks. Build and inspect the portable EXE using fictional data, including Save/Open compatibility. `publish.ps1` runs the checks and produces the package.
 2. Commit and push the reviewed changes. Create the matching **app-v** tag and wait for successful main/tag CI. The tag workflow creates a draft release with ZIP and checksum assets.
 3. Verify the draft package and checksum, then publish it with **make_latest=true**.

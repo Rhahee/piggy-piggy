@@ -6,7 +6,7 @@
 
 A portable, offline Windows application for personal finances across multiple bank accounts. English interface, magenta Office-style ribbon, Rupiah amounts (**Rp 1,250,000.00**), and dates in **MM/DD/YYYY**.
 
-[Repository](https://github.com/Rhahee/piggy-piggy) · [Releases](https://github.com/Rhahee/piggy-piggy/releases) · [Verification](docs/VERIFICATION.md) · [Release guide](docs/RELEASING.md)
+[Repository](https://github.com/Rhahee/piggy-piggy) · [Releases](https://github.com/Rhahee/piggy-piggy/releases) · [Dokumentasi](docs/README.md) · [Verification](docs/VERIFICATION.md) · [Release guide](docs/RELEASING.md)
 
 ## Update 0.1.0.2 — Minor Fix
 
@@ -112,6 +112,8 @@ Format: **Release.Feature.Fix.Minor**. Kenaikan satu bagian mengembalikan seluru
 Klasifikasi perubahan dan nomor versi dikonfirmasikan sebelum rilis. Bentuk portable merupakan pilihan distribusi; 0 menandai tahap pengembangan.
 
 ## Build dan pemeriksaan
+
+**Web installer Windows x64** tersedia sebagai build lokal melalui `./build-installer.ps1` dengan Inno Setup. Installer tetap mengambil paket terbaru dari kanal resmi GitHub saat dijalankan, memverifikasi SHA-256 dan versi EXE, lalu memasang aplikasi, shortcut dan uninstaller. Internet diperlukan; versi terpasang yang lebih baru menolak downgrade. Lihat [panduan installer](docs/INSTALLER.md). Paket installer belum dipublikasikan.
 
 Memerlukan Windows x64 dan .NET SDK 10. Jalankan **./publish.ps1** untuk tes inti, pemeriksaan WPF dan build EXE portable. Parameter **-Dotnet** menerima lokasi SDK bila tidak tersedia di PATH. Hasil paket berada di **dist/**.
 

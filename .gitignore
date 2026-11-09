@@ -1,14 +1,22 @@
+# Generated build output at any project depth
 bin/
 obj/
-dist/
+
+# Local distribution packages, archives and QA evidence
+/dist/
+/qa/
+/design-qa.md
+
+# Financial documents and temporary files are never source assets
 *.mpb
 *.tmp
-qa/
-design-qa.md
+
+# Editor state
 .vs/
 .idea/
 *.user
 *.suo
+# Local configuration and signing secrets
 .env
 .env.*
 *.pfx

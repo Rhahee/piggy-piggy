@@ -503,6 +503,7 @@ Test("metadata actions reject a missing debt",()=>{var d=BorrowedDebt();var id=G
 SelfDebtChecks.Run(Test);
 BorrowTransferChecks.Run(Test);
 UpdateChannelChecks.Run(Test);
+InstallerChecks.Run(Test);
 Test("borrowing transfer respects Wishlist protected source funds",()=>{var d=WishlistFunded();var self=new Debt(Guid.NewGuid(),"Pocket money","",null,Kind:DebtKind.Self,SelfBankId:bankA.Id);d.Purposes=[debt];Reject(()=>DebtService.SaveTransaction(d,Transfer() with{Date=wishlistDate,Amount=4_500_000,Allocations=new[]{new TransferAllocation(debt.Id,4_500_000,self.Id,SelfDebtAction.Borrow)}},self));});
 Test("Wishlist transfer cannot also start Self Debt",()=>{var d=WishlistMoved();var tx=d.Transactions.Single(t=>t.Kind==TransactionKind.Transfer);var self=new Debt(Guid.NewGuid(),"Pocket money","",null,Kind:DebtKind.Self,SelfBankId:tx.BankId);d.Purposes=[debt];Reject(()=>DebtService.SaveTransaction(d,tx with{Allocations=new[]{new TransferAllocation(debt.Id,tx.Amount,self.Id,SelfDebtAction.Borrow)}},self));});
 Test("Wishlist purchase cannot also become Self Debt",()=>{var d=WishlistBought();var tx=d.Transactions.Single(t=>t.Kind==TransactionKind.Expense);var self=new Debt(Guid.NewGuid(),"Wishlist item","",null,Kind:DebtKind.Self,SelfBankId:tx.BankId);Reject(()=>DebtService.SaveTransaction(d,tx with{DebtId=self.Id},self));});
