@@ -106,3 +106,19 @@ Before this patch, a separate live portable update from the exact app-v0.1.0.1 s
 The application version is **0.1.1.0** (Feature Fix), retaining document format 9 and update epoch 3. Local publication passed **446 core checks and 45 isolated WPF checks**, including explicit 0.1.0.2 → 0.1.1.0 availability and equal/older-version rejection. The self-contained Windows x64 EXE published successfully. The previously user-tested web installer remains byte-identical, SHA-256 `a83d9f29e1a927830b2042c4f5d9601d6ccda1272fba025f737a00cb3c748ea3`.
 
 The release is prepared with portable ZIP/checksum from tag CI plus the separately verified fixed web installer/checksum. Publication and channel promotion are performed after CI/package verification; final results are recorded below when completed.
+
+## Published update — 0.1.1.0 (2026-11-09)
+
+[app-v0.1.1.0](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.1.0) was published from **29896ce0f676e5140397ae8df6256754f219f839**. Both [main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/42557938423) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/42557938531) succeeded. Tag job logs confirmed **446 core checks and 45 isolated WPF checks**. The draft contained four assets: portable ZIP/checksum and fixed web installer/checksum. Each asset was downloaded from GitHub and matched its GitHub digest; both package checksum files matched their binaries before publication.
+
+- Portable ZIP SHA-256: `6a3b0aefb9a718679496079bdcf40a38303c66fddc6a72c576fad5e6f069e212`.
+- Packaged EXE SHA-256: `9988c258ff54a275735961e1119c955a2fa62e8a94ee11424875256dc78b21c6`.
+- Fixed web installer SHA-256: `a83d9f29e1a927830b2042c4f5d9601d6ccda1272fba025f737a00cb3c748ea3` (unchanged from the previously user-tested installer).
+
+The exact CI-packaged EXE reported **0.1.1.0** with the tagged commit in ProductVersion. Native inspection confirmed the version and a fictional three-transaction document. Open/Save preserved document data and persisted the current report period as expected. A separate core Save/Open check also passed with that fictional document.
+
+The release was published as GitHub Latest before `update-channel.json` was promoted in **7c00b5f**. Anonymous public checksum downloads matched the verified assets. Production release checks returned **Available → 0.1.1.0** for 0.1.0.2 and **UpToDate** for 0.1.1.0. Both the current web installer resolver and the previously built fixed installer helper resolved 0.1.1.0 without rebuilding the launcher.
+
+A separate exact published **0.1.0.2** client then performed a full live UI update: check, download, SHA-256 verification, EXE replacement, restart and reopening of the same fictional three-transaction document. The updated EXE hash matched the CI package and the document SHA-256 remained unchanged. No real financial document or user installation was used. Physical mixed-DPI monitor migration, Windows clean-machine installation and installer signing remain outside this verification.
+
+Local evidence is retained under `qa/release-0.1.1.0/`, including CI logs, downloaded assets, package verification, live channel checks and the live update result; this evidence is ignored by Git.
