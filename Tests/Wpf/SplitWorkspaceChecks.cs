@@ -36,6 +36,7 @@ internal static class SplitWorkspaceChecks
                 var viewport = layout.Children.OfType<ScrollViewer>().Last();
                 var workspace = (DockPanel)((Grid)viewport.Content).Children[0];
                 var split = workspace.Children.OfType<Grid>().Last();
+                var wideWindowWidth = window.ActualWidth;
                 // This is the preferred column width left by dragging the divider.
                 split.ColumnDefinitions[0].Width = new GridLength(500);
                 await Idle(window);
@@ -50,7 +51,7 @@ internal static class SplitWorkspaceChecks
                     Require(split.ColumnDefinitions[2].ActualWidth >= 380, page + " detail lost its minimum usable width.");
                 }
                 await CheckDetail();
-                window.Width = 1500; await Idle(window);
+                window.Width = wideWindowWidth; await Idle(window);
                 Require(Math.Abs(split.ColumnDefinitions[0].ActualWidth - wideListWidth) < 1, "Widening the window lost the preferred list width.");
                 await WindowSizingChecks.AcrossDpi(window, _ => CheckDetail());
                 Require(!((DocumentSession)Field(window, "session")).Dirty, "Resizing changed the financial document.");

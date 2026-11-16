@@ -1,4 +1,4 @@
-# Piggy 0.1.1.3 — Wishlist and Debt Panel Resize
+# Piggy 0.1.1.4 — Wishlist and Debt Panel Resize
 
 **Jenis perubahan: Minor Fix.** Format dokumen **9** dan updater epoch **3** dipertahankan.
 
