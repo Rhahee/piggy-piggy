@@ -12,7 +12,7 @@
 | [Baseline 0.1.0.0](releases/0.1.0.0.md) | Catatan rilis awal |
 | [Rilis 0.1.1.0](releases/0.1.1.0.md) | Web installer, perbaikan DPI dan versi Windows |
 | [Rilis 0.1.1.1](releases/0.1.1.1.md) | Ikon grayscale MPB dan perbaikan kepemilikan asosiasi |
-| [Rilis 0.1.1.4](releases/0.1.1.4.md) | Perbaikan resize panel Wishlist dan Debt |
+| [Rilis 0.1.1.5](releases/0.1.1.5.md) | Perbaikan resize panel Wishlist dan Debt |
 | [Review preview installer](reviews/2026-11-09-installer-preview.md) | Laporan historis sebelum beralih ke web installer |
 | [Review ikon MPB 0.1.1.1](reviews/2026-11-09-mpb-icon-0.1.1.1.md) | Riwayat bug cleanup default dan perbaikannya |
 

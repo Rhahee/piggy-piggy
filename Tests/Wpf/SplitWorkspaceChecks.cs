@@ -47,12 +47,19 @@ internal static class SplitWorkspaceChecks
                     viewport.ScrollToRightEnd(); await Idle(window);
                     var detail = (ScrollViewer)Field(window, page == "Wishlist" ? "wishlistDetailScroll" : "debtDetailScroll");
                     var bounds = detail.TransformToAncestor(viewport).TransformBounds(new Rect(0, 0, detail.ActualWidth, detail.ActualHeight));
-                    Require(bounds.Left >= -1 && bounds.Right <= viewport.ViewportWidth + 1, page + " detail is clipped even at the rightmost scroll position.");
+                    Require(bounds.Right <= viewport.ViewportWidth + 1, page + " detail right edge cannot be reached by scrolling.");
+                    viewport.ScrollToLeftEnd(); await Idle(window);
+                    bounds = detail.TransformToAncestor(viewport).TransformBounds(new Rect(0, 0, detail.ActualWidth, detail.ActualHeight));
+                    Require(bounds.Left >= -1, page + " detail left edge cannot be reached by scrolling.");
                     Require(split.ColumnDefinitions[2].ActualWidth >= 380, page + " detail lost its minimum usable width.");
                 }
                 await CheckDetail();
                 window.Width = wideWindowWidth; await Idle(window);
                 Require(Math.Abs(split.ColumnDefinitions[0].ActualWidth - wideListWidth) < 1, "Widening the window lost the preferred list width.");
+                // Exercise a logical viewport narrower than the detail minimum,
+                // even when the local monitor is larger than the CI monitor.
+                window.MinWidth = 450; window.Width = 500; await Idle(window);
+                await CheckDetail();
                 await WindowSizingChecks.AcrossDpi(window, _ => CheckDetail());
                 Require(!((DocumentSession)Field(window, "session")).Dirty, "Resizing changed the financial document.");
                 Require(original.SequenceEqual(System.IO.File.ReadAllBytes(file)), "Layout checks rewrote the document.");
