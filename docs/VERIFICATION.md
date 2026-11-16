@@ -1,12 +1,12 @@
-# Verification — 0.1.0.2
+# Verification — 0.1.1.3
 
 ## Baseline scope
 
-The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.1.0.2**, update epoch **3**, and document format **9**.
+The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.1.1.3**, update epoch **3**, and document format **9**.
 
 ## Automated checks
 
-The current suite contains **435 core checks** and **45 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, format-1–8 compatibility, format-9 Wishlist/Debt links, reservations, debt repayments and corrections, persistent report periods, compact accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering. The 20 new WPF cases cover validation focus, scrolling, cancellation without staged data, and blank opening balances.
+The current suite contains **448 core checks** and **51 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, format-1–8 compatibility, format-9 Wishlist/Debt links, reservations, debt repayments and corrections, persistent report periods, compact accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering. The 20 new WPF cases cover validation focus, scrolling, cancellation without staged data, and blank opening balances.
 
 The WPF checks instantiate production controls in an isolated STA process. They check behavior and measurement, not rendered pixels. Update HTTP cases use simulated responses unless a live check is explicitly recorded.
 
@@ -186,3 +186,10 @@ The draft ZIP/checksum were downloaded from GitHub and matched their asset diges
 Native inspection of the exact GitHub package confirmed the transaction date column, column sizing, and mouse-wheel row scrolling while navigation stayed pinned. A fictional 125-transaction document also passed Save/Open with identical canonical bytes; its SHA-256 remained `009f55a09fa21bc4bb55c1ba949bfb2acf2f906c5389baf98a0f93317715e3cf` after native inspection. No real financial document or installed user application was opened or modified.
 
 The release was published as GitHub Latest before channel promotion in **54d707f**. Anonymous public downloads of both checksum assets matched the verified copies. Once GitHub raw-channel propagation completed, production checks returned **Available → 0.1.1.2** for installed versions **0.1.1.0** and **0.1.1.1**, **UpToDate** for **0.1.1.2**, and the web installer resolver selected **0.1.1.2**. This verifies live discovery/resolution; a fresh install and complete in-place replacement/restart were not repeated for this release. Evidence is retained under `qa/release-0.1.1.2/`.
+## Split-workspace fix — 0.1.1.3 (2026-11-16)
+
+Wishlist and Debt now constrain the list panel to the workspace width while reserving the detail panel minimum, divider and margins. Narrowing the window after widening the divider keeps the right-hand controls within the viewport; widening the same layout again can restore its preferred list width. The existing horizontal workspace scroll remains available on smaller viewports.
+
+All **448 core checks and 51 isolated WPF checks** passed. Two new production-window regressions cover Wishlist and Debt: a preferred list width of 500, window resize from 1500 to 1000, widening again, and simulated DPI transitions 100/125/150/200/100%. They verify detail bounds, minimum detail width, clean document state and unchanged fictional MPB bytes. The original Wishlist reproduction now measures the detail right edge at 773.6 inside a viewport of 785.6, rather than 896 outside that viewport. Edit Target Date, Mark as Purchased and Edit Date remain within horizontal reach.
+
+This fix is prepared as application version **0.1.1.3**, with document format **9** and update epoch **3** retained. Physical mixed-DPI monitor migration remains unverified. Publication and channel verification are recorded separately below.

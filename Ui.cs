@@ -123,6 +123,15 @@ public static class Ui
         noRows.Setters.Add(new Setter(UIElement.VisibilityProperty,Visibility.Visible)); visibility.Triggers.Add(noRows); empty.Style = visibility;
         surface.Children.Add(empty); return surface;
     }
+    public static void ConstrainSplitList(FrameworkElement workspace, Grid split)
+    {
+        var list = split.ColumnDefinitions[0];
+        var reserved = split.Margin.Left + split.Margin.Right + split.ColumnDefinitions.Skip(1)
+            .Sum(column => column.Width.IsAbsolute ? column.Width.Value : column.MinWidth);
+        // Use the containing workspace, not the split's overflowing desired width.
+        // Retain the preferred Width so widening the window can restore it.
+        workspace.SizeChanged += (_, _) => list.MaxWidth = Math.Max(list.MinWidth, workspace.ActualWidth - reserved);
+    }
     public static ScrollViewer WorkspaceViewport(UIElement content)
     {
         var frame = new Grid { MinWidth = 600, ClipToBounds = true };

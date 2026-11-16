@@ -31,6 +31,7 @@ public sealed partial class MainWindow
         if(items.Count==0){var empty=Ui.Stack();empty.Margin=new Thickness(24);empty.Children.Add(Ui.Text(doc.Wishlists.Count==0?"Plan your next purchase":"No allocations in this account",20,bold:true));var note=Ui.Text(doc.Wishlists.Count==0?"Create a wishlist now. Allocate funds from your accounts whenever you are ready.":"Choose All accounts to see wishlists without allocations or funded by other banks.",14,Ui.Muted);note.Margin=new Thickness(0,12,0,0);empty.Children.Add(note);outer.Children.Add(empty);return outer;}
         var selectionChanged=renderedWishlist!=selectedWishlist;renderedWishlist=selectedWishlist;
         var split=new Grid{Margin=new Thickness(12)};wishlistSplit=split;split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(wishlistLeftWidth),MinWidth=180});split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(4)});split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star),MinWidth=380});
+        Ui.ConstrainSplitList(outer,split);
         var list=Ui.Stack();FrameworkElement? selectedButton=null;
         foreach(var w in items){
             var body=Ui.Stack();var name=Ui.Text(w.Name,14,bold:true);name.TextWrapping=TextWrapping.NoWrap;name.TextTrimming=TextTrimming.CharacterEllipsis;name.ToolTip=w.Name;body.Children.Add(name);

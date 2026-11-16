@@ -2,7 +2,7 @@
 
 ## Baseline and numbering
 
-The initial development baseline is **0.1.0.0**. Version components are **Release.Feature.Fix.Minor**. Incrementing one component resets every component to its right to zero. Confirm the change classification and proposed version with the user before publishing.
+The initial development baseline is **0.1.0.0**. Version components are **Release.Feature.Fix.Minor**. Incrementing one component resets every component to its right to zero. Every fix must increment the application version, as instructed by the user on 2026-11-16; never publish or retain a new fix under an already released version. Routine minor fixes increment the last component. Confirm the classification for broader feature or release changes before publishing.
 
 - Minor adjustment: 0.1.0.1.
 - Feature fix: 0.1.1.0.

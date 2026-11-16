@@ -33,6 +33,7 @@ public sealed partial class MainWindow
         if(debts.Count==0){var empty=Ui.Stack();empty.Margin=new Thickness(24);empty.Children.Add(Ui.Text(doc.Debts.Count==0?"Track a debt":"No debts related to this account",20,bold:true));empty.Children.Add(Ui.Text("Use New Debt, or edit an existing Expense to track Self Debt. Income can track borrowing from a lender. Tracking does not create additional bank movements.",14,Ui.Muted));root.Children.Add(empty);return root;}
         if(!debts.Any(d=>d.Id==selectedDebt))selectedDebt=debts[0].Id;var changed=renderedDebt!=selectedDebt;renderedDebt=selectedDebt;
         var split=new Grid{Margin=new Thickness(12)};split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(248),MinWidth=184});split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(4)});split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star),MinWidth=380});
+        Ui.ConstrainSplitList(root,split);
         var list=Ui.Stack();FrameworkElement? selectedButton=null;
         foreach(var debt in debts){
             var body=Ui.Stack();body.Children.Add(Ui.Text(debt.Name,14,bold:true));body.Children.Add(Ui.Text(debt.Kind==DebtKind.Self?"Self Debt · "+doc.BankName(debt.SelfBankId!.Value):debt.Lender,12,Ui.Muted));body.Children.Add(Ui.Text(DebtService.StatusName(doc.DebtState(debt.Id))+(doc.DebtOverdue(debt.Id)?" · Overdue":""),12,doc.DebtOverdue(debt.Id)?Ui.Red:Ui.Muted));body.Children.Add(Ui.Text(Display.Money(doc.DebtAmounts(debt.Id).Remaining),14,Ui.Accent));

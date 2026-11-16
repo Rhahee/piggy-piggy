@@ -160,6 +160,7 @@ internal static class Program
         passed+=DateAndSearchChecks.Run();
         passed+=WindowSizingChecks.Run();
         passed+=LedgerLayoutChecks.Run();
+        passed+=SplitWorkspaceChecks.Run();
         owner.Close();Console.WriteLine($"All {passed} isolated WPF checks passed.");return 0;
     }
 }
