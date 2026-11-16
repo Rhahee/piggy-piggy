@@ -205,3 +205,16 @@ The exact GitHub draft ZIP and checksum were downloaded and matched both SHA-256
 - Fictional MPB SHA-256: `0d9d934342e4248cfa72c18d2f67801aa95b476cb028f69366be092b3549c884`.
 
 The verified draft assets were published as GitHub Latest before channel promotion in **dff895b**. Anonymous public downloads of both checksum assets matched the verified copies. Production channel checks returned **Available → 0.1.1.5** for installed **0.1.1.2**, **UpToDate** for **0.1.1.5**, and the unchanged web installer resolver selected **0.1.1.5**. This verifies live discovery/resolution; a fresh install and complete in-place replacement/restart were not repeated for this release. Physical mixed-DPI monitor migration remains outside this verification. Evidence is retained under `qa/release-0.1.1.5/`.
+## User-approved renumbering — published 0.1.1.3 (2026-11-16)
+
+The user explicitly requested sequential numbering, confirmation before future version changes, and replacing the published 0.1.1.5 with **0.1.1.3**, accepting that clients already on 0.1.1.5 will not automatically downgrade. The same verified split-panel code was rebuilt with version **0.1.1.3** from commit **0914104e76bbbe833484e5df8cfc28f23b89a642**. [Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/43795059057) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/43795256311) succeeded with **448 core checks and 51 WPF checks** before publication.
+
+The old candidate/published tag targets were backed up under `archive/2026-11-16/app-v0.1.1.3`, `archive/2026-11-16/app-v0.1.1.4` and `archive/2026-11-16/app-v0.1.1.5`. After main CI passed, the unused app-v0.1.1.3 candidate tag was replaced using a lease against its known previous SHA. The new [0.1.1.3 release](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.1.3) is public and GitHub Latest; 0.1.1.5 was withdrawn to a private draft, and the active app-v0.1.1.4/app-v0.1.1.5 tags were removed. The previous publication record above is historical and no longer identifies the active release.
+
+- Portable ZIP SHA-256: `18a2d3f6d4f80b4408e3a81b37e69c42ae45010a40e4ada4703b2a171d1f3401`.
+- Packaged EXE SHA-256: `6fab8288a823b02728df8f5db9bf45f578fa23d32aeec75b1c9c9b2b6442f04d`.
+- Installer revision 1.0.0.1 remains byte-identical with SHA-256 `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`.
+
+The GitHub draft ZIP and checksum matched their asset digests; production package staging verified SHA-256, the three-file contract and EXE version. Native inspection confirmed **v0.1.1.3** and the Saved fictional document. Its bytes remained unchanged, and canonical Save/Open passed. No installed user application or real financial document was changed.
+
+Both checksum assets were downloaded anonymously after publication and matched the verified copies. Channel promotion in **c0083dc** was confirmed by production checks: installed **0.1.1.2 → Available 0.1.1.3**, **0.1.1.3 → UpToDate**, **0.1.1.5 → UpToDate** (numeric downgrade protection retained), and installer resolution **0.1.1.3**. Epoch 3 and document format 9 remain unchanged. Full update installation/restart and physical mixed-DPI monitor migration were not repeated. Evidence is under `qa/renumber-0.1.1.3/`.
