@@ -1,8 +1,8 @@
-# Verification — 0.1.1.5
+# Verification — 0.1.1.3
 
 ## Baseline scope
 
-The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.1.1.5**, update epoch **3**, and document format **9**.
+The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.1.1.3**, update epoch **3**, and document format **9**.
 
 ## Automated checks
 
@@ -193,7 +193,7 @@ Wishlist and Debt now constrain the list panel to the workspace width while rese
 All **448 core checks and 51 isolated WPF checks** passed. Two new production-window regressions cover Wishlist and Debt: a preferred list width of 500, window resize from 1500 to 1000, widening again, and simulated DPI transitions 100/125/150/200/100%. They verify detail bounds, minimum detail width, clean document state and unchanged fictional MPB bytes. The original Wishlist reproduction now measures the detail right edge at 773.6 inside a viewport of 785.6, rather than 896 outside that viewport. Edit Target Date, Mark as Purchased and Edit Date remain within horizontal reach.
 
 This fix is prepared as application version **0.1.1.5**, with document format **9** and update epoch **3** retained. Physical mixed-DPI monitor migration remains unverified. Publication and channel verification are recorded separately below.
-## Published release — 0.1.1.5
+## Original publication — 0.1.1.5 (renumbered to 0.1.1.3 by user request)
 
 On **2026-11-16**, [app-v0.1.1.5](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.1.1.5) was published from **2345c142a92ecc7d6399ce5c36708db7cbfe8f56**. [Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/43793201535) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/43793412559) succeeded, including **448 core checks and 51 WPF checks**. The split-workspace checks account for monitor-clamped initial window width and verify scroll reachability of both detail edges when the logical viewport is narrower than the detail panel. Candidate tags 0.1.1.3 and 0.1.1.4 failed these new CI assertions and were never published or promoted; their tags were not moved or reused.
 

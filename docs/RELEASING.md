@@ -2,7 +2,7 @@
 
 ## Baseline and numbering
 
-The initial development baseline is **0.1.0.0**. Version components are **Release.Feature.Fix.Minor**. Incrementing one component resets every component to its right to zero. Every fix must increment the application version, as instructed by the user on 2026-11-16; never publish or retain a new fix under an already released version. Routine minor fixes increment the last component. Confirm the classification for broader feature or release changes before publishing.
+The initial development baseline is **0.1.0.0**. Version components are **Release.Feature.Fix.Minor**. Incrementing one component resets every component to its right to zero. Every application fix must increment the version, with release numbers kept sequential. Confirm the proposed version with the user before changing version metadata, creating release tags or publishing. Failed CI attempts and test-only adjustments do not consume another application version. Complete main CI before creating the release tag.
 
 - Minor adjustment: 0.1.0.1.
 - Feature fix: 0.1.1.0.
@@ -28,3 +28,5 @@ The optional web installer is built separately with `build-installer.ps1`. It fo
 5. Keep README download links, release notes and verification evidence current.
 
 Do not move published tags or replace published assets during normal releases. Archive and confirm any exceptional history cleanup separately. Do not reuse an existing tag to publish a different application binary.
+
+Exception authorized on 2026-11-16: archive the old 0.1.1.3–0.1.1.5 tags, rebuild the verified split-panel fix as 0.1.1.3, replace the unused candidate tag and withdraw 0.1.1.5. Preserve epoch 3 and normal numeric downgrade protection; clients already on 0.1.1.5 are not automatically offered the lower version.
