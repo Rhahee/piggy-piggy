@@ -85,29 +85,7 @@ public sealed partial class MainWindow
         }
         else if(status is WishlistStatus.Purchased or WishlistStatus.Closed){var purchase=doc.WishlistEvents.Last(e=>e.WishlistId==w.Id&&e.Kind==WishlistEventKind.Purchased);var text=Ui.Text($"Actual Purchase: {Display.Money(purchase.Amount)} · {doc.BankName(purchase.FromBankId!.Value)}\nAdmin Fee: {Display.Money(purchase.Fee)}",14);text.Margin=new Thickness(0,12,0,0);panel.Children.Add(text);}
         if (w.Goals is not null)
-        {
-            panel.Children.Add(Ui.Text("Unassigned balance: " + Display.Money(doc.WishlistBucket(w.Id, null)), 14));
-            panel.Children.Add(Ui.Text("Goals", 16, bold:true));
-            void EditGoal(WishlistGoal? goal) { if (new WishlistGoalDialog(this, session, w, goal).ShowDialog() == true) Render(); }
-            foreach (var goal in w.ActiveGoals)
-            {
-                var row = new DockPanel();
-                if (status == WishlistStatus.Planned) {
-                    var delete = Ui.Button("Delete", () => DeleteWishlistGoal(w, goal));
-                    System.Windows.Automation.AutomationProperties.SetName(delete, "Delete " + goal.Name);
-                    DockPanel.SetDock(delete, Dock.Right);
-                    row.Children.Add(delete);
-                    var edit = Ui.Button("Edit", () => EditGoal(goal));
-                    System.Windows.Automation.AutomationProperties.SetName(edit, "Edit " + goal.Name);
-                    DockPanel.SetDock(edit, Dock.Right);
-                    row.Children.Add(edit);
-                }
-                var goalBalance = doc.WishlistBucket(w.Id, goal.Id);
-                var estimate = goal.Estimate is decimal price ? $" · {Display.Money(price)} · Remaining {Display.Money(Math.Max(0, price - goalBalance))}" : "";
-                row.Children.Add(Ui.Text(goal.Name + " · Allocated " + Display.Money(goalBalance) + estimate, 14)); panel.Children.Add(row);
-            }
-            if (status == WishlistStatus.Planned) panel.Children.Add(Ui.Button("Add Goal", () => EditGoal(null)));
-        }
+            panel.Children.Add(WishlistGoals(w, status == WishlistStatus.Planned));
         var actions=new WrapPanel{Margin=new Thickness(0,16,0,16)};
         void Add(string label,string action,bool enabled=true,bool primary=false){var b=Ui.Button(label,()=>WishlistAction(action),primary);b.IsEnabled=enabled;b.Margin=new Thickness(0,0,4,4);actions.Children.Add(b);}
         if(status==WishlistStatus.Planned){Add("Allocate Funds","allocate",true,true);Add("Move Funds","move",allocated>0);Add("Release Funds","release",allocated>0);Add(w.Goals is null ? "Mark as Purchased" : "Purchase","purchase",w.Goals is null || w.ActiveGoals.Any());}
@@ -135,6 +113,86 @@ public sealed partial class MainWindow
         if(!string.IsNullOrWhiteSpace(w.Notes)){var title=Ui.Text("Notes",16,bold:true);title.Margin=new Thickness(0,16,0,8);panel.Children.Add(title);panel.Children.Add(Ui.Text(w.Notes,14,Ui.Muted));}
         return panel;
     }
+    private UIElement WishlistGoals(WishlistItem budget, bool editable)
+    {
+        var doc = session.Document;
+        var section = Ui.Stack();
+        section.Margin = new Thickness(0, 16, 0, 0);
+        var title = Ui.Text("Goals", 16, bold: true);
+        title.Margin = new Thickness(0, 0, 0, 8);
+        section.Children.Add(title);
+
+        var table = new Grid { MinWidth = editable ? 605 : 465 };
+        table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star), MinWidth = 120 });
+        for (var i = 0; i < 3; i++)
+            table.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 115 });
+        if (editable)
+            table.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, MinWidth = 140 });
+
+        void AddRow(string name, string allocated, string estimate, string remaining, Brush background, StackPanel? actions = null, bool header = false)
+        {
+            var row = table.RowDefinitions.Count;
+            table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var fill = new Border { Background = background, BorderBrush = Ui.Line, BorderThickness = new Thickness(0, 0, 0, 1) };
+            Grid.SetRow(fill, row);
+            Grid.SetColumnSpan(fill, table.ColumnDefinitions.Count);
+            table.Children.Add(fill);
+
+            var values = new[] { name, allocated, estimate, remaining };
+            for (var column = 0; column < values.Length; column++)
+            {
+                var cell = Ui.Text(values[column], 13, bold: header || row == 1);
+                cell.Margin = new Thickness(10, 8, 10, 8);
+                cell.TextAlignment = column == 0 ? TextAlignment.Left : TextAlignment.Right;
+                Grid.SetRow(cell, row);
+                Grid.SetColumn(cell, column);
+                table.Children.Add(cell);
+            }
+            if (actions is not null)
+            {
+                Grid.SetRow(actions, row);
+                Grid.SetColumn(actions, 4);
+                table.Children.Add(actions);
+            }
+        }
+
+        void EditGoal(WishlistGoal? goal)
+        {
+            if (new WishlistGoalDialog(this, session, budget, goal).ShowDialog() == true) Render();
+        }
+
+        AddRow("Goal", "Allocated", "Estimate", "Remaining", Ui.Brush("#F3F3F6"), header: true);
+        AddRow("Unassigned balance", Display.Money(doc.WishlistBucket(budget.Id, null)), "—", "—", Ui.Pale);
+        foreach (var goal in budget.ActiveGoals)
+        {
+            StackPanel? actions = null;
+            if (editable)
+            {
+                actions = Ui.Stack(Orientation.Horizontal);
+                actions.VerticalAlignment = VerticalAlignment.Center;
+                actions.HorizontalAlignment = HorizontalAlignment.Right;
+                var edit = Ui.Button("Edit", () => EditGoal(goal));
+                var delete = Ui.Button("Delete", () => DeleteWishlistGoal(budget, goal));
+                System.Windows.Automation.AutomationProperties.SetName(edit, "Edit " + goal.Name);
+                System.Windows.Automation.AutomationProperties.SetName(delete, "Delete " + goal.Name);
+                actions.Children.Add(edit);
+                actions.Children.Add(delete);
+            }
+            var balance = doc.WishlistBucket(budget.Id, goal.Id);
+            AddRow(goal.Name, Display.Money(balance), goal.Estimate is decimal estimate ? Display.Money(estimate) : "—",
+                goal.Estimate is decimal target ? Display.Money(Math.Max(0, target - balance)) : "—", Brushes.White, actions);
+        }
+        section.Children.Add(new ScrollViewer { Content = table, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        if (editable)
+        {
+            var add = Ui.Button("Add Goal", () => EditGoal(null));
+            add.HorizontalAlignment = HorizontalAlignment.Left;
+            section.Children.Add(add);
+        }
+        return section;
+    }
+
     private void DeleteWishlistGoal(WishlistItem budget, WishlistGoal goal)
     {
         if (!ConfirmDialog.Confirm(this, "Delete Goal?", $"Remove {goal.Name} from {budget.Name}? Any allocated funds will return to the group's unassigned balance. Purchase history is retained.", "Delete Goal")) return;
