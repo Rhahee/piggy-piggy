@@ -1,41 +1,10 @@
-# Piggy 0.1.1.3 — Wishlist and Debt Panel Resize
+# Piggy 0.2.0.0 — Shared Budget
 
-**Jenis perubahan: Minor Fix.** Format dokumen **9** dan updater epoch **3** dipertahankan.
+- Buat **Shared Budget** untuk beberapa goal seperti Kamera, Peripheral, dan Proyektor. Setiap goal dapat memiliki estimasi harga dan alokasi sendiri.
+- Pembelian menggunakan alokasi goal di rekening yang dipilih. Sisa alokasi kembali ke saldo bebas grup. Gunakan **Reallocate Funds** untuk memindahkannya ke goal atau grup lain.
+- Goal dapat dipakai untuk pembelian berikutnya. Koreksi pembelian tersedia untuk setiap catatan pembelian.
+- Wishlist berstatus **Planned** dapat dikonversi melalui **Edit → Shared Budget**. Nama dan target lama menjadi goal pertama. Dana yang sudah ada masuk ke saldo bebas grup dan riwayat tetap tersedia.
 
-- Detail dan tombol Wishlist tetap terlihat setelah panel daftar diperlebar lalu jendela diperkecil.
-- Panel kiri menyesuaikan ruang yang tersedia sambil mempertahankan lebar minimum panel detail. Memperlebar kembali jendela dapat memulihkan lebar panel yang dipilih.
-- Perlindungan yang sama diterapkan pada halaman Debt yang memakai pola panel serupa.
-- Dua pemeriksaan regresi baru mencakup resize divider, resize jendela dan perubahan DPI 100/125/150/200% tanpa mengubah dokumen contoh.
+Piggy membuka dokumen lama dan menyimpan perubahan dalam format `.mpb` 11. Sebelum menyimpan, buat salinan jika dokumen masih perlu dibuka di Piggy versi lama.
 
-Validasi lokal: **448 pemeriksaan inti dan 51 pemeriksaan WPF lulus**. Pengujian beberapa monitor fisik dengan DPI berbeda masih belum tersedia.
-
-Web installer revisi **1.0.0.1** tetap sama dan mengikuti versi aplikasi dari kanal resmi. Paket rilis menyediakan ZIP portable, installer yang sama, dan checksum SHA-256.
-
-# Piggy 0.1.1.2 — Transaction Layout and Scrolling
-
-**Jenis perubahan: Minor Fix.** Format dokumen **9** dan updater epoch **3** dipertahankan.
-
-- Tanggal transaksi tetap terlihat pada kolom pertama, termasuk saat tabel digeser horizontal.
-- Lebar kolom mengikuti ruang jendela, dengan batas minimum untuk bank, kategori, deskripsi dan nominal.
-- Ribbon, tab halaman dan status tetap di tempat; hanya isi halaman/tabel yang bergulir.
-- Scroll wheel bekerja pada tabel, halaman Overview dan daftar bank yang panjang. Pada batas tabel Overview, scroll diteruskan ke halaman.
-- Perbaikan layout tabel ketika skala layar berpindah hingga 200% dan kembali ke 100%.
-
-Validasi lokal: **448 pemeriksaan inti dan 49 WPF lulus**, serta pemeriksaan langsung scroll wheel dan maximize memakai 125 transaksi fiktif. Bukti dan batas pengujian dicatat di `docs/VERIFICATION.md`.
-
-# Piggy 0.1.1.1 — Grayscale Document Icon
-
-**Jenis perubahan: Minor Fix.** Format dokumen **9** dan updater epoch **3** dipertahankan.
-
-- Ikon dokumen `.mpb` memakai koin yang sama dengan ikon aplikasi dalam **grayscale**, berlatar transparan dan tersedia dalam sembilan ukuran ICO dari 16 hingga 256 piksel. Ikon aplikasi tetap emas.
-- **Web installer revisi 1.0.0.1** menyediakan pilihan registrasi `.mpb`, ikon dokumen, perintah Open dan Open With per pengguna. Pilihan aplikasi pembuka yang sudah ada dipertahankan.
-- **Bug cleanup default diperbaiki:** uninstaller kini hanya membersihkan default `.mpb` yang benar-benar dimiliki instalasi tersebut. Mematikan opsi registrasi tidak lagi menyebabkan default lama ke Piggy terhapus saat uninstall.
-- Penanda kepemilikan terikat ke folder instalasi dan dipertahankan saat pemasangan ulang dengan opsi registrasi dimatikan. Cleanup yang sah tetap berjalan, sementara pilihan pembuka yang berubah setelah pemasangan tetap aman.
-
-**Untuk memperoleh ikon/asosiasi `.mpb`, jalankan installer terbaru sekali.** Updater dalam aplikasi hanya mengganti EXE; ia tidak dapat menambah aturan registrasi dan uninstall pada installer lama. Jika Windows masih menyimpan pilihan pembuka lain, pilih Piggy melalui **Open With**. Dokumen keuangan tidak diubah.
-
-Aset rilis: `Piggy-Piggy-0.1.1.1-win-x64.zip`, `Piggy-Piggy-Web-Setup-win-x64.exe`, dan checksum SHA-256 untuk masing-masing paket. Installer lama di rilis 0.1.1.0 tidak diganti.
-
-Uji regresi gagal pada kode lama dan **37 pemeriksaan asosiasi berkas lulus setelah perbaikan**, termasuk pencarian ikon/perintah melalui Windows Shell, default lama + opt-out, pemasangan ulang, default aplikasi lain dan pelestarian sentinel `.mpb`. Bukti pemeriksaan inti/WPF, CI dan paket publik dicatat pada `docs/VERIFICATION.md`. Pengujian memakai ekstensi/ProgID QA terpisah; Windows bersih dan pemilihan UserChoice belum diverifikasi. Installer belum ditandatangani digital.
-
-Build lokal juga lulus **448 pemeriksaan inti dan 45 WPF**, serta menghasilkan EXE portable self-contained dan installer revisi 1.0.0.1.
+Rilis Windows x64 menyediakan paket portable dan web installer dengan checksum SHA-256.

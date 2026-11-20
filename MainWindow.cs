@@ -168,7 +168,7 @@ public sealed partial class MainWindow : Window
             Button Command(string icon,string text,string action,bool enabled=true){var b=Ui.IconButton(icon,text,()=>WishlistAction(action),Ui.Accent);b.IsEnabled=enabled;return b;}
             Group("Wishlist",Command("add","New Wishlist","new"),Command("edit","Edit","edit",state==WishlistStatus.Planned),Command("dismiss","Cancel","cancel",state==WishlistStatus.Planned));
             Group("Funds",Command("add","Allocate","allocate",state==WishlistStatus.Planned),Command("arrow_swap","Move","move",state==WishlistStatus.Planned&&funds>0),Command("subtract","Release","release",state==WishlistStatus.Planned&&funds>0));
-            Group("Purchase",Command("money","Purchase","purchase",state==WishlistStatus.Planned),Command("arrow_down","Balance","balance",state==WishlistStatus.Purchased&&funds>0),Command("square","Close","close",state==WishlistStatus.Purchased&&funds==0));
+            Group("Purchase",Command("money","Purchase","purchase",state==WishlistStatus.Planned && active?.Goals?.Length != 0),Command("arrow_down","Balance","balance",state==WishlistStatus.Purchased&&funds>0),Command("square","Close","close",state==WishlistStatus.Purchased&&funds==0));
         }
         else if (ribbonTab == "Home")
         {

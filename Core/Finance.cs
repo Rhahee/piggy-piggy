@@ -24,7 +24,7 @@ public sealed record Transaction(Guid Id, DateOnly Date, TransactionKind Kind, G
 
 public sealed partial class FinanceDocument
 {
-    public const int CurrentVersion = 9;
+    public const int CurrentVersion = 11;
     public const string AdminFeeName = "Admin Fee";
     // Guid.Empty cannot be a user category ID; the UI uses it for the system fee filter.
     public static Guid AdminFeeFilterId => Guid.Empty;
@@ -38,7 +38,7 @@ public sealed partial class FinanceDocument
     public ReportPeriod? SavedPeriod { get; set; }
 
     public FinanceDocument Copy() => new() { Format = Format, Version = Version,
-        Banks = [.. Banks], Categories = [.. Categories], Purposes = [.. Purposes], PaySchedule = PaySchedule is null ? null : new(PaySchedule.Rules.ToArray()), SavedPeriod = SavedPeriod, Wishlists = [.. Wishlists], WishlistEvents = [.. WishlistEvents], Debts = [.. Debts],
+        Banks = [.. Banks], Categories = [.. Categories], Purposes = [.. Purposes], PaySchedule = PaySchedule is null ? null : new(PaySchedule.Rules.ToArray()), SavedPeriod = SavedPeriod, Wishlists = Wishlists.Select(w => w.Goals is null ? w : w with { Goals = [.. w.Goals] }).ToList(), WishlistEvents = [.. WishlistEvents], Debts = [.. Debts],
         Transactions = Transactions.Select(t => t with { Allocations = t.Allocations?.ToArray() }).ToList() };
     public string BankName(Guid id) => Banks.First(b => b.Id == id).Name;
     public string CategoryName(Guid? id) => id is null ? "—" : id == AdminFeeFilterId ? AdminFeeName : Categories.First(c => c.Id == id).Name;
@@ -80,7 +80,7 @@ public sealed partial class FinanceDocument
     public static bool IsMoney(decimal value) => decimal.Round(value, 2) == value && Math.Abs(value) <= 999_999_999_999_999.99m;
     public void Validate()
     {
-        Require(Format == "MyPiggyBank" && Version is 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or CurrentVersion, "This file format or version is not supported.");
+        Require(Format == "MyPiggyBank" && Version is 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or CurrentVersion, "This file format or version is not supported.");
         Require(Version >= 5 || PaySchedule is null,"Pay-cycle settings require the current document format.");
         PaySchedule?.Validate();
         Require(Version >= 5 || SavedPeriod is null,"Saved report periods require document format 5.");

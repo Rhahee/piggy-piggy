@@ -41,6 +41,50 @@ internal static class Program
     public static int Main()
     {
         var app=new App();app.InitializeComponent();var owner=new Window();new System.Windows.Interop.WindowInteropHelper(owner).EnsureHandle();
+        Check("shared budget can be created, given a goal and used for a purchase through the forms", () => {
+            var session = new DocumentSession();
+            var expense = new Category(Guid.NewGuid(), "Shopping", CategoryKind.Expense);
+            session.Apply(new FinanceDocument { Banks = [From], Categories = [expense] });
+            void SubmitForm(FormWindow form, Action fill) {
+                bool accepted = false;
+                form.ContentRendered += (_, _) => {
+                    try {
+                        fill();
+                        Desc<Button>(form).Single(b => b.IsDefault).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                        accepted = form.DialogResult == true;
+                    } finally { if (form.IsVisible) form.Close(); }
+                };
+                form.ShowDialog(); Equal(true, accepted);
+            }
+            FormWindow Dialog(string name, params object?[] args) => (FormWindow)Activator.CreateInstance(typeof(MainWindow).Assembly.GetType("MyPiggyBank." + name, true)!, args)!;
+            var create = Dialog("WishlistDetailsDialog", owner, session, null);
+            SubmitForm(create, () => {
+                Desc<ComboBox>(create).Single(c => c.Items.Contains("Shared Budget")).SelectedItem = "Shared Budget";
+                Desc<TextBox>(create).Single(t => t.MaxLength == 100).Text = "Tech Budget";
+            });
+            var budget = session.Document.Wishlists.Single();
+            var add = Dialog("WishlistGoalDialog", owner, session, budget, null);
+            SubmitForm(add, () => Desc<TextBox>(add).Single(t => t.MaxLength == 100).Text = "Spare parts");
+            budget = session.Document.Wishlists.Single();
+            Equal(null, budget.Goals!.Single().Estimate);
+            session.Apply(WishlistService.Allocate(session.Document, budget.Id, From.Id, 1_000_000, Start));
+            var assign = Dialog("WishlistFundsDialog", owner, session, budget, "assign");
+            SubmitForm(assign, () => {
+                Desc<ComboBox>(assign).Where(c => c.Items.Count == 2 && Label(c.Items[0]) == "Unassigned balance").Last().SelectedIndex = 1;
+                Desc<MoneyTextBox>(assign).First().Text = "300000";
+            });
+            Equal(300_000m, session.Document.WishlistBucket(budget.Id, budget.Goals![0].Id));
+            var buy = Dialog("WishlistFundsDialog", owner, session, budget, "purchase");
+            SubmitForm(buy, () => {
+                Desc<ComboBox>(buy).Single(c => c.Items.Contains(budget.Goals![0])).SelectedIndex = 0;
+                Desc<ComboBox>(buy).Single(c => c.Items.Contains(expense)).SelectedItem = expense;
+                Desc<MoneyTextBox>(buy).First().Text = "250000";
+            });
+            Equal(750_000m, session.Document.WishlistAllocated(budget.Id));
+            Equal(budget.Goals![0].Id, session.Document.WishlistEvents.Last(e => e.Kind == WishlistEventKind.Purchased).GoalId);
+            Equal(0m, session.Document.WishlistBucket(budget.Id, budget.Goals[0].Id));
+            Equal(750_000m, session.Document.WishlistBucket(budget.Id, null));
+        });
         Check("Purpose only begins without debt metadata",()=>{var s=Session();var e=new AllocationEditor(owner,s,()=>500_000,()=>From.Id,null);e.AddRow(Purpose.Id,500_000);Equal(0,Mode(e).SelectedIndex);var result=e.Read();Equal(0,result.NewDebts.Count);Equal<Guid?>(null,result.Allocations.Single().SelfDebtId);});
         Check("Borrow new stages name due date and original bank without mutating session",()=>{var s=Session();var before=JsonSerializer.Serialize(s.Document);var e=new AllocationEditor(owner,s,()=>500_000,()=>From.Id,null);e.AddRow(Purpose.Id,500_000);Mode(e).SelectedIndex=1;Equal("New Self Debt",Label(Debt(e).SelectedItem));Desc<TextBox>(e).Single(t=>t.MaxLength==100).Text="New borrowing";Desc<TextBox>(e).Single(t=>t.MaxLength==10).Text="12/31/2026";var r=e.Read();Equal(1,r.NewDebts.Count);Equal("New borrowing",r.NewDebts.Single().Name);Equal<Guid?>(From.Id,r.NewDebts.Single().SelfBankId);Equal(new DateOnly(2026,12,31),(DateOnly)r.NewDebts.Single().DueDate!);Equal(SelfDebtAction.Borrow,r.Allocations.Single().DebtAction);Equal(before,JsonSerializer.Serialize(s.Document));var tx=Borrow() with{Allocations=r.Allocations};var d=DebtService.SaveTransaction(s.Document,tx,additionalDebts:r.NewDebts);Equal(2,d.Debts.Count);});
         Check("existing borrowing loads Borrow rather than Repay",()=>{var s=Session();var e=new AllocationEditor(owner,s,()=>500_000,()=>From.Id,s.Document.Transactions.Single().Allocations);Equal(1,Mode(e).SelectedIndex);var r=e.Read();Equal(0,r.NewDebts.Count);Equal<Guid?>(Existing.Id,r.Allocations.Single().SelfDebtId);Equal(SelfDebtAction.Borrow,r.Allocations.Single().DebtAction);});
