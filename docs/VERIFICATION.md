@@ -218,3 +218,11 @@ The old candidate/published tag targets were backed up under `archive/2026-11-16
 The GitHub draft ZIP and checksum matched their asset digests; production package staging verified SHA-256, the three-file contract and EXE version. Native inspection confirmed **v0.1.1.3** and the Saved fictional document. Its bytes remained unchanged, and canonical Save/Open passed. No installed user application or real financial document was changed.
 
 Both checksum assets were downloaded anonymously after publication and matched the verified copies. Channel promotion in **c0083dc** was confirmed by production checks: installed **0.1.1.2 → Available 0.1.1.3**, **0.1.1.3 → UpToDate**, **0.1.1.5 → UpToDate** (numeric downgrade protection retained), and installer resolution **0.1.1.3**. Epoch 3 and document format 9 remain unchanged. Full update installation/restart and physical mixed-DPI monitor migration were not repeated. Evidence is under `qa/renumber-0.1.1.3/`.
+
+## Published release — 0.2.0.0
+
+[Shared Budget 0.2.0.0](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.2.0.0) was built from commit **0469c94c4d250301183184ff9899412c65d9629d**. [Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/44724927987) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/44725243241) succeeded. Local verification passed **452 core and 52 WPF checks**, including manual goal allocation, purchase surplus, inter-group reallocation, and conversion of an existing planned wishlist.
+
+The GitHub portable ZIP and checksum matched their asset digests. Production staging verified the package and EXE version. The staged EXE opened and closed a fictional format-9 document without modifying it. A separate Save/Open check verified equivalent document contents in format 11. ZIP SHA-256 is `bc92f4914ea954693041520742f2c2b762c879623f8d0622bd5af3ecf5d78ed7`. The attached installer is byte-identical to the 0.1.1.3 release asset. Its SHA-256 is `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`.
+
+After publication and channel promotion in **20a1d21**, the production updater reported **Available → 0.2.0.0** for **0.1.1.3** and **0.1.1.5**, and **UpToDate** for **0.2.0.0**. The web installer resolver selected 0.2.0.0. Full installation and update restart were outside this release verification.
