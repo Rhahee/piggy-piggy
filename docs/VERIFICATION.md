@@ -234,3 +234,11 @@ After publication and channel promotion in **20a1d21**, the production updater r
 Production staging verified the GitHub portable ZIP checksum and EXE version. The staged EXE opened and closed a fictional format-11 document without changing it. A separate Save/Open check preserved its contents in format 12. ZIP SHA-256 is `87949058010e7fb431af30571156ecd8eed3af7ee5adb726d39f170400a6434e`. The attached web installer matches the previous release asset at SHA-256 `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`.
 
 After publication and channel promotion in **29d7906**, the updater found **0.2.1.0** from **0.1.1.3** and **0.2.0.0**, and reported **UpToDate** for **0.2.1.0**. The web installer resolver selected **0.2.1.0**. Full installation and update restart were outside this verification.
+
+## Published release — 0.2.1.1
+
+[Shared Budget Goals Table 0.2.1.1](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.2.1.1) was built from **ee3e59c428988cc62d7124a4499a72d2b1b0e50a**. [Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/44731879700) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/44732054426) passed. The tag run passed **453 core and 52 WPF checks**, including the position of Unassigned balance and horizontal table scrolling in a narrow pane.
+
+Production staging verified the GitHub portable ZIP and EXE version. The packaged application opened and closed a fictional format-12 document without rewriting it. A separate Save/Open check preserved its contents. The ZIP SHA-256 is `2d39075a4c9488793d088f0c72c2737efad2be0e6b6804f73beb4c49c5ff531f`. The web installer matches the previous release asset at SHA-256 `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`. Both public checksum downloads matched the verified copies.
+
+After publication and channel promotion in **7aca7ab**, the production updater found **0.2.1.1** from **0.1.1.3** and **0.2.1.0**, and reported **UpToDate** for **0.2.1.1**. The web installer resolver selected **0.2.1.1**. Full installation and update restart were outside this verification.
