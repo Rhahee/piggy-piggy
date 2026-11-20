@@ -120,9 +120,9 @@ internal sealed class WishlistFundsDialog : FormWindow
         if(action=="move")Field("Method *",method);
         Field(action=="move"?"From Bank *":action=="purchase"?"Pay from *":"Bank *",bank);
         if(action=="move")Field("To Bank *",target);
-        var goal = new ComboBox { ItemsSource = wish.Goals, DisplayMemberPath = "Name", SelectedIndex = -1 };
+        var goal = new ComboBox { ItemsSource = wish.ActiveGoals.ToArray(), DisplayMemberPath = "Name", SelectedIndex = -1 };
         var choices = new[] { new FundingChoice(null, "Unassigned balance") }
-            .Concat(wish.Goals?.Select(g => new FundingChoice(g.Id, g.Name)) ?? []).ToArray();
+            .Concat(wish.ActiveGoals.Select(g => new FundingChoice(g.Id, g.Name))).ToArray();
         var source = new ComboBox { ItemsSource = choices, DisplayMemberPath = "Name", SelectedIndex = 0 };
         var destination = new ComboBox { ItemsSource = doc.Wishlists.Where(w => doc.WishlistState(w.Id) == WishlistStatus.Planned && w.Goals is not null).ToArray(), DisplayMemberPath = "Name", SelectedValuePath = "Id", SelectedValue = wish.Id };
         var destinationGoal = new ComboBox { DisplayMemberPath = "Name" };
@@ -130,7 +130,7 @@ internal sealed class WishlistFundsDialog : FormWindow
         {
             var selected = destination.SelectedItem as WishlistItem;
             destinationGoal.ItemsSource = new[] { new FundingChoice(null, "Unassigned balance") }
-                .Concat(selected?.Goals?.Select(g => new FundingChoice(g.Id, g.Name)) ?? []).ToArray();
+                .Concat(selected?.ActiveGoals.Select(g => new FundingChoice(g.Id, g.Name)) ?? []).ToArray();
             destinationGoal.SelectedIndex = 0;
         }
         if (wish.Goals is not null && action is ("release" or "move" or "assign")) Field("From allocation *", source);

@@ -12,6 +12,7 @@
 | [Baseline 0.1.0.0](releases/0.1.0.0.md) | Catatan rilis awal |
 | [Rilis 0.1.1.0](releases/0.1.1.0.md) | Web installer, perbaikan DPI dan versi Windows |
 | [Rilis 0.1.1.1](releases/0.1.1.1.md) | Ikon grayscale MPB dan perbaikan kepemilikan asosiasi |
+| [Rilis 0.2.1.0](releases/0.2.1.0.md) | Progress Shared Budget dan hapus goal |
 | [Rilis 0.2.0.0](releases/0.2.0.0.md) | Shared Budget dengan alokasi manual per goal |
 | [Rilis 0.1.1.3](releases/0.1.1.3.md) | Perbaikan resize panel Wishlist dan Debt |
 | [Review preview installer](reviews/2026-11-09-installer-preview.md) | Laporan historis sebelum beralih ke web installer |

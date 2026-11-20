@@ -84,6 +84,24 @@ internal static class Program
             Equal(budget.Goals![0].Id, session.Document.WishlistEvents.Last(e => e.Kind == WishlistEventKind.Purchased).GoalId);
             Equal(0m, session.Document.WishlistBucket(budget.Id, budget.Goals[0].Id));
             Equal(750_000m, session.Document.WishlistBucket(budget.Id, null));
+
+            var window = new MainWindow();
+            var detailSession = (DocumentSession)typeof(MainWindow).GetField("session", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+            try
+            {
+                var goal = budget.Goals[0] with { Estimate = 1_500_000 };
+                detailSession.Apply(WishlistService.Edit(session.Document, budget with { Goals = [goal] }));
+                var detail = typeof(MainWindow).GetMethod("WishlistDetail", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                UIElement RenderDetail() => (UIElement)detail.Invoke(window, [detailSession.Document.Wishlists.Single()])!;
+                var content = RenderDetail();
+                Equal(50d, Desc<ProgressBar>(content).Single().Value);
+                Equal(true, Desc<Button>(content).Any(b => AutomationProperties.GetName(b) == "Delete " + goal.Name));
+                detailSession.Apply(WishlistService.DeleteGoal(detailSession.Document, budget.Id, goal.Id, DateOnly.FromDateTime(DateTime.Today)));
+                content = RenderDetail();
+                Equal(0, Desc<ProgressBar>(content).Count());
+                Equal(false, Desc<Button>(content).Any(b => AutomationProperties.GetName(b) == "Delete " + goal.Name));
+            }
+            finally { detailSession.New(); window.Close(); }
         });
         Check("Purpose only begins without debt metadata",()=>{var s=Session();var e=new AllocationEditor(owner,s,()=>500_000,()=>From.Id,null);e.AddRow(Purpose.Id,500_000);Equal(0,Mode(e).SelectedIndex);var result=e.Read();Equal(0,result.NewDebts.Count);Equal<Guid?>(null,result.Allocations.Single().SelfDebtId);});
         Check("Borrow new stages name due date and original bank without mutating session",()=>{var s=Session();var before=JsonSerializer.Serialize(s.Document);var e=new AllocationEditor(owner,s,()=>500_000,()=>From.Id,null);e.AddRow(Purpose.Id,500_000);Mode(e).SelectedIndex=1;Equal("New Self Debt",Label(Debt(e).SelectedItem));Desc<TextBox>(e).Single(t=>t.MaxLength==100).Text="New borrowing";Desc<TextBox>(e).Single(t=>t.MaxLength==10).Text="12/31/2026";var r=e.Read();Equal(1,r.NewDebts.Count);Equal("New borrowing",r.NewDebts.Single().Name);Equal<Guid?>(From.Id,r.NewDebts.Single().SelfBankId);Equal(new DateOnly(2026,12,31),(DateOnly)r.NewDebts.Single().DueDate!);Equal(SelfDebtAction.Borrow,r.Allocations.Single().DebtAction);Equal(before,JsonSerializer.Serialize(s.Document));var tx=Borrow() with{Allocations=r.Allocations};var d=DebtService.SaveTransaction(s.Document,tx,additionalDebts:r.NewDebts);Equal(2,d.Debts.Count);});

@@ -1,12 +1,18 @@
 # Piggy
 
-**Versi: [0.2.0.0 — Shared Budget](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.2.0.0).**
+**Versi: [0.2.1.0 — Shared Budget Progress & Goal Deletion](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.2.1.0).**
 
-**Jenis perubahan: Fitur baru.** Baseline awal tetap tersedia melalui [catatan rilis 0.1.0.0](docs/releases/0.1.0.0.md).
+**Jenis perubahan: Perbaikan fitur.** Baseline awal tetap tersedia melalui [catatan rilis 0.1.0.0](docs/releases/0.1.0.0.md).
 
 A portable, offline Windows application for personal finances across multiple bank accounts. English interface, magenta Office-style ribbon, Rupiah amounts (**Rp 1,250,000.00**), and dates in **MM/DD/YYYY**.
 
 [Repository](https://github.com/Rhahee/piggy-piggy) · [Releases](https://github.com/Rhahee/piggy-piggy/releases) · [Dokumentasi](docs/README.md) · [Verification](docs/VERIFICATION.md) · [Release guide](docs/RELEASING.md)
+
+## Update 0.2.1.0 — Shared Budget Progress & Goal Deletion
+
+Progress bar membandingkan saldo grup dengan total estimasi goal aktif. Hapus goal melalui tombol **Delete** di baris goal. Sisa alokasi kembali ke saldo bebas grup pada rekening yang sama, dan riwayat pembeliannya tetap tersedia.
+
+[Unduh portable 0.2.1.0](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.2.1.0/Piggy-Piggy-0.2.1.0-win-x64.zip) · [Unduh web installer](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.2.1.0/Piggy-Piggy-Web-Setup-win-x64.exe) · [Catatan rilis](docs/releases/0.2.1.0.md)
 
 ## Update 0.2.0.0 — Shared Budget
 

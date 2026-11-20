@@ -3,8 +3,12 @@ namespace MyPiggyBank.Core;
 public enum WishlistStatus { Planned, Purchased, Closed, Cancelled }
 public enum WishlistPriority { Low, Normal, High }
 public enum WishlistEventKind { Created, Edited, Allocated, Released, Transferred, Reassigned, Purchased, PurchaseCorrected, Cancelled, Closed }
-public sealed record WishlistGoal(Guid Id, string Name, decimal? Estimate);
-public sealed record WishlistItem(Guid Id, string Name, decimal TargetAmount, DateOnly? TargetDate, WishlistPriority Priority, string Notes, WishlistGoal[]? Goals = null);
+public sealed record WishlistGoal(Guid Id, string Name, decimal? Estimate, bool Archived = false);
+public sealed record WishlistItem(Guid Id, string Name, decimal TargetAmount, DateOnly? TargetDate, WishlistPriority Priority, string Notes, WishlistGoal[]? Goals = null)
+{
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IEnumerable<WishlistGoal> ActiveGoals => Goals?.Where(g => !g.Archived) ?? [];
+}
 public sealed record WishlistEvent(Guid Id, Guid WishlistId, DateOnly Date, WishlistEventKind Kind, Guid? FromBankId, Guid? ToBankId, decimal Amount, Guid? TransactionId, decimal Fee, string Description, Guid? GoalId = null, bool ConvertedToShared = false, Guid? AllocationGoalId = null, bool InternalFunding = false);
 
 public sealed partial class FinanceDocument
@@ -49,6 +53,7 @@ public sealed partial class FinanceDocument
                 Require(goals.All(g => g is not null && g.Id != Guid.Empty && !string.IsNullOrWhiteSpace(g.Name) && g.Name == g.Name.Trim() && g.Name.Length <= 100 &&
                     (g.Estimate is null || g.Estimate > 0 && IsMoney(g.Estimate.Value))), "Enter a goal name and a positive estimate or leave it blank.");
                 Require(goals.Select(g => g.Id).Distinct().Count() == goals.Length, "Goal identifiers must be unique.");
+                Require(Version >= 12 || goals.All(g => !g.Archived), "Deleted goals require document format 12.");
             }
             else Require(w.TargetAmount > 0 && IsMoney(w.TargetAmount),"Target amount must be greater than zero, with at most two decimals.");
             Require(Enum.IsDefined(w.Priority) && (w.TargetDate is null || w.TargetDate != default(DateOnly)) && w.Notes is not null && w.Notes.Length <= 2000,"Enter a valid priority, target date and notes (up to 2,000 characters).");
@@ -112,6 +117,8 @@ public sealed partial class FinanceDocument
                 Require(funds.Values.All(v=>v>=0),"An activity exceeds the wishlist allocation available at that point in its history.");
             }
             Require(created,"The wishlist creation history is missing.");
+            Require(funds.All(entry => entry.Value == 0 || w.Goals?.Any(g => g.Archived && g.Id == entry.Key.Goal) != true),
+                "Deleted goals cannot hold funds.");
         }
         foreach (var e in WishlistEvents)
         {
@@ -229,9 +236,30 @@ public static class WishlistService
         Planned(doc, from);
         Planned(doc, to);
         Require(from != to || fromGoal != toGoal, "Choose a different destination.");
+        if (toGoal.HasValue)
+            Require(doc.Wishlists.Single(w => w.Id == to).ActiveGoals.Any(g => g.Id == toGoal), "Choose an active destination goal.");
         Require(amount > 0 && amount <= doc.WishlistBucket(from, fromGoal, bank, date), "Insufficient funds in the selected allocation.");
         var d = doc.Copy();
         ShiftFunds(d, from, fromGoal, to, toGoal, bank, amount, date);
+        return Commit(d);
+    }
+    public static FinanceDocument DeleteGoal(FinanceDocument doc, Guid id, Guid goalId, DateOnly date)
+    {
+        Planned(doc, id);
+        var budget = doc.Wishlists.Single(w => w.Id == id);
+        var goal = budget.ActiveGoals.FirstOrDefault(g => g.Id == goalId)
+            ?? throw new System.IO.InvalidDataException("Choose an active goal.");
+        var d = doc.Copy();
+        foreach (var bank in d.Banks)
+        {
+            var balance = d.WishlistBucket(id, goalId, bank.Id, date);
+            if (balance > 0) ShiftFunds(d, id, goalId, id, null, bank.Id, balance, date);
+        }
+        Event(d, id, date, WishlistEventKind.Edited, text: $"Deleted goal: {goal.Name}.");
+        d.Wishlists[d.Wishlists.FindIndex(w => w.Id == id)] = budget with
+        {
+            Goals = budget.Goals!.Select(g => g.Id == goalId ? g with { Archived = true } : g).ToArray()
+        };
         return Commit(d);
     }
     private static void ShiftFunds(FinanceDocument d, Guid from, Guid? fromGoal, Guid to, Guid? toGoal, Guid bank, decimal amount, DateOnly date)
@@ -288,7 +316,7 @@ public static class WishlistService
         Planned(doc,id); Require(doc.Banks.Any(b=>b.Id==bank),"Choose an existing bank."); Require(amount>0 && amount<=doc.WishlistBucket(id,goalId,bank,date),"The selected account needs enough allocation for this goal or wishlist. Assign or move funds first.");
         Require(fee>=0 && fee<=doc.AvailableBalance(bank,date),"The admin fee must be covered by available balance.");
         var wishlist = doc.Wishlists.Single(w => w.Id == id);
-        var goal = wishlist.Goals?.FirstOrDefault(g => g.Id == goalId);
+        var goal = wishlist.ActiveGoals.FirstOrDefault(g => g.Id == goalId);
         Require(wishlist.Goals is null ? goalId is null : goal is not null, "Choose a goal belonging to this budget.");
         var label = wishlist.Name + (goal is null ? "" : " · " + goal.Name);
         var d=doc.Copy(); var tx=Guid.NewGuid(); d.Transactions.Add(new(tx,date,TransactionKind.Expense,bank,null,category,amount,fee,null,"Wishlist purchase · "+label));
@@ -331,6 +359,9 @@ public static class WishlistService
             ?? throw new System.IO.InvalidDataException("Purchase not found.");
         Require(doc.Transactions.Any(t => t.Id == purchase.TransactionId), "This purchase was already corrected.");
         var d=doc.Copy(); d.Transactions.RemoveAll(t=>t.Id==purchase.TransactionId);
-        Event(d,id,date,WishlistEventKind.PurchaseCorrected,purchase.Amount,to:purchase.FromBankId,tx:purchase.TransactionId,fee:purchase.Fee,goalId:purchase.GoalId,allocationGoalId:purchase.AllocationGoalId,text:$"Purchase reversed. Restored {Display.Money(purchase.Amount)} to {doc.BankName(purchase.FromBankId!.Value)} allocation. Previously released funds remain available."); return Commit(d);
+        Event(d,id,date,WishlistEventKind.PurchaseCorrected,purchase.Amount,to:purchase.FromBankId,tx:purchase.TransactionId,fee:purchase.Fee,goalId:purchase.GoalId,allocationGoalId:purchase.AllocationGoalId,text:$"Purchase reversed. Restored {Display.Money(purchase.Amount)} to {doc.BankName(purchase.FromBankId!.Value)} allocation. Previously released funds remain available.");
+        if (purchase.AllocationGoalId is Guid goalId && d.Wishlists.Single(w => w.Id == id).Goals!.Any(g => g.Id == goalId && g.Archived))
+            ShiftFunds(d, id, goalId, id, null, purchase.FromBankId!.Value, purchase.Amount, date);
+        return Commit(d);
     }
 }

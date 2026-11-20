@@ -47,7 +47,7 @@ Invalid("income cannot have destination",d => d.Transactions[0] = Income() with 
 Invalid("unknown bank rejected",d => d.Transactions[0] = Income() with { BankId = Guid.NewGuid() });
 Invalid("unknown enum rejected",d => d.Transactions[0] = Income() with { Kind = (TransactionKind)100 });
 Invalid("duplicate transaction ID rejected",d => d.Transactions.Add(d.Transactions[0]));
-Invalid("unsupported version rejected",d => d.Version = 12);
+Invalid("unsupported version rejected",d => d.Version = 13);
 Invalid("wrong format marker rejected",d => d.Format = "OtherApp");
 Test("optional description may be blank",() => { var d = Complete(); d.Transactions[0] = Income() with { Description = "" }; d.Validate(); });
 Test("category names can be reused across different types",() => { var d = Empty(); d.Categories.Add(new(Guid.NewGuid(),"Salary",CategoryKind.Expense)); d.Validate(); });
@@ -534,6 +534,35 @@ try
         var bought = WishlistService.Purchase(funded, budget.Id, bankB.Id, food.Id, 1000, 0, wishlistDate, firstGoal.Id);
         Equal(WishlistStatus.Planned, bought.WishlistState(budget.Id));
         Reject(() => WishlistService.Edit(bought, Laptop()));
+    });
+    Test("deleting a goal releases both accounts and preserves correctable purchase history", () => {
+        var goal = new WishlistGoal(Guid.NewGuid(), "Camera", 500_000);
+        var next = new WishlistGoal(Guid.NewGuid(), "Charger", 300_000);
+        var group = Laptop() with { Id = Guid.NewGuid(), Name = "Tech", TargetAmount = 0, Goals = [goal,next] };
+        var date = DateOnly.FromDateTime(DateTime.Today);
+        var d = WishlistService.Create(WishlistEmpty(), group);
+        d = WishlistService.Allocate(d, group.Id, bankA.Id, 500_000, date);
+        d = WishlistService.Allocate(d, group.Id, bankB.Id, 200_000, date);
+        d = WishlistService.AssignFunds(d, group.Id, null, group.Id, goal.Id, bankA.Id, 400_000, date);
+        d = WishlistService.Purchase(d, group.Id, bankA.Id, food.Id, 350_000, 0, date, goal.Id);
+        var purchase = d.WishlistEvents.Single(e => e.Kind == WishlistEventKind.Purchased);
+        d = WishlistService.AssignFunds(d, group.Id, null, group.Id, goal.Id, bankA.Id, 60_000, date);
+        d = WishlistService.AssignFunds(d, group.Id, null, group.Id, goal.Id, bankB.Id, 100_000, date);
+        var deleted = WishlistService.DeleteGoal(d, group.Id, goal.Id, date);
+        Equal(next, deleted.Wishlists.Single(w => w.Id == group.Id).ActiveGoals.Single());
+        Equal(0m, deleted.WishlistBucket(group.Id, goal.Id));
+        Equal(150_000m, deleted.WishlistBucket(group.Id, null, bankA.Id));
+        Equal(200_000m, deleted.WishlistBucket(group.Id, null, bankB.Id));
+        Equal(d.WishlistAllocated(group.Id), deleted.WishlistAllocated(group.Id));
+        Equal(purchase.TransactionId!.Value, deleted.Transactions.Single().Id);
+        Reject(() => WishlistService.AssignFunds(deleted, group.Id, null, group.Id, goal.Id, bankA.Id, 10_000, date));
+        var file = Path.Combine(folder, "deleted-goal.mpb");
+        var session = new DocumentSession(); session.Apply(deleted); session.Save(file); session.Open(file);
+        Equal(next, session.Document.Wishlists.Single(w => w.Id == group.Id).ActiveGoals.Single());
+        var corrected = WishlistService.CorrectPurchase(session.Document, group.Id, date, purchase.Id);
+        Equal(500_000m, corrected.WishlistBucket(group.Id, null, bankA.Id));
+        Equal(0m, corrected.WishlistBucket(group.Id, goal.Id));
+        Equal(0, corrected.Transactions.Count);
     });
     Test("goal surplus becomes unassigned and can fund another goal and another group", () => {
         var a = new WishlistGoal(Guid.NewGuid(), "A", 500_000);
