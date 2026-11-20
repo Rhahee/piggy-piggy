@@ -226,3 +226,11 @@ Both checksum assets were downloaded anonymously after publication and matched t
 The GitHub portable ZIP and checksum matched their asset digests. Production staging verified the package and EXE version. The staged EXE opened and closed a fictional format-9 document without modifying it. A separate Save/Open check verified equivalent document contents in format 11. ZIP SHA-256 is `bc92f4914ea954693041520742f2c2b762c879623f8d0622bd5af3ecf5d78ed7`. The attached installer is byte-identical to the 0.1.1.3 release asset. Its SHA-256 is `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`.
 
 After publication and channel promotion in **20a1d21**, the production updater reported **Available → 0.2.0.0** for **0.1.1.3** and **0.1.1.5**, and **UpToDate** for **0.2.0.0**. The web installer resolver selected 0.2.0.0. Full installation and update restart were outside this release verification.
+
+## Published release — 0.2.1.0
+
+[Shared Budget Progress & Goal Deletion 0.2.1.0](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.2.1.0) was built from **48223adaca0c426678829e910367660fbda3211e**. [Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/44728919742) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/44729118666) succeeded. Local verification passed **453 core and 52 WPF checks**, including progress based on active goals, two-account allocation release on deletion, and purchase correction after deletion.
+
+Production staging verified the GitHub portable ZIP checksum and EXE version. The staged EXE opened and closed a fictional format-11 document without changing it. A separate Save/Open check preserved its contents in format 12. ZIP SHA-256 is `87949058010e7fb431af30571156ecd8eed3af7ee5adb726d39f170400a6434e`. The attached web installer matches the previous release asset at SHA-256 `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`.
+
+After publication and channel promotion in **29d7906**, the updater found **0.2.1.0** from **0.1.1.3** and **0.2.0.0**, and reported **UpToDate** for **0.2.1.0**. The web installer resolver selected **0.2.1.0**. Full installation and update restart were outside this verification.
