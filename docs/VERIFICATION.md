@@ -1,12 +1,12 @@
-# Verification — 0.1.1.3
+# Verification — 0.2.1.2
 
 ## Baseline scope
 
-The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.1.1.3**, update epoch **3**, and document format **9**.
+The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.2.1.2**, update epoch **3**, and document format **12**.
 
 ## Automated checks
 
-The current suite contains **448 core checks** and **51 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, format-1–8 compatibility, format-9 Wishlist/Debt links, reservations, debt repayments and corrections, persistent report periods, compact accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering. The 20 new WPF cases cover validation focus, scrolling, cancellation without staged data, and blank opening balances.
+The current suite contains **458 core checks** and **55 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, legacy document compatibility, Wishlist/Debt links, Shared Budget allocations and purchase-date corrections, reservations, debt repayments and corrections, persistent report periods, accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering. WPF cases also cover theme resources, calendar navigation, Overview account filtering, validation focus, scrolling, cancellation without staged data, and blank opening balances.
 
 The WPF checks instantiate production controls in an isolated STA process. They check behavior and measurement, not rendered pixels. Update HTTP cases use simulated responses unless a live check is explicitly recorded.
 
@@ -250,3 +250,11 @@ The user approved combining this fix with the existing local 0.2.1.2 UI work. Ed
 The new regression failed on the original implementation. After the fix, **458 core checks and 55 isolated WPF checks** passed on the current local checkout. Five new core checks cover two-account surplus, earlier/later corrections, source immutability, manual reallocation limits, fee funding, purchases without surplus, format-12 Save/Open, repeated corrections and purchase reversal. Fictional data and temporary directories were used.
 
 Document format remains **12**. Existing documents have no operation ID, so automatic returns are identified by the adjacent matching goal-to-unassigned pairs produced by Purchase. No application version metadata was changed by this fix. No commit, push, tag or release was performed. Native mouse interaction, full update installation/restart and physical mixed-DPI monitor migration were not repeated.
+
+## Published release — 0.2.1.2
+
+[Workspace & Purchase Date Fix 0.2.1.2](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.2.1.2) was built from **7105ecbdf7d0174dbc2efbc4fa254c32e19f098b**. [Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/45101871486) passed before tag creation; [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/45102066554) also passed. Local publication checks passed **458 core and 55 WPF checks**.
+
+Production staging verified the GitHub draft ZIP checksum, three-file payload and EXE version/source. The packaged EXE opened and closed a fictional format-12 document with 125 transactions without changing its bytes. Save/Open preserved its contents. Native inspection confirmed Overview, the displayed version and bundled font; the local build also switched to the dark theme successfully. ZIP SHA-256 is `0c4e9d0f469edb12442137ef81ea6b087f4d7dd296c5ac7bf13e1bea4e3bd2fd`; EXE SHA-256 is `b7222e3406dc6366b74bdbf7f1e40d09b44739f39a2b70dd6dcf7e25238dfa94`.
+
+The release was published as GitHub Latest on **2026-11-23**. The attached installer is unchanged at SHA-256 `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`. Both public checksum downloads matched the verified copies. Format 12 and epoch 3 remain unchanged. Full update installation/restart and physical mixed-DPI monitor migration were not repeated. Local evidence is under `qa/release-0.2.1.2/`.
