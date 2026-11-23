@@ -10,12 +10,14 @@ namespace MyPiggyBank;
 public class FormWindow : Window
 {
     protected readonly StackPanel Fields = Ui.Stack();
-    protected readonly TextBlock Error = Ui.Text("", 13, Ui.Red);
+    private protected WorkspaceTheme Theme { get; }
+    protected readonly TextBlock Error;
     protected readonly Button Submit;
     private readonly List<(FrameworkElement Input, string Label)> requiredFields = [];
     public FormWindow(Window owner, string title, string subtitle, string buttonText, double width = 520)
     {
-        Ui.ApplyWindowStyle(this);
+        Theme = WorkspaceTheme.ApplyDialog(this, owner);
+        Error = Theme.Label("", 13, Theme.Error);
         Owner = owner; Title = title + " — Piggy"; Width = width; SizeToContent = SizeToContent.Height;
         MaxHeight = Math.Max(500, SystemParameters.WorkArea.Height - 48); ResizeMode = ResizeMode.CanResize;
         WindowStartupLocation = WindowStartupLocation.CenterOwner; MinWidth = 440;
@@ -26,18 +28,21 @@ public class FormWindow : Window
             Top=Math.Max(area.Top,Math.Min(Top,area.Bottom-ActualHeight));
         }
         Loaded+=(_,_)=>KeepFormInWorkArea();SizeChanged+=(_,_)=>KeepFormInWorkArea();
-        var root = new DockPanel { Margin = new Thickness(20) }; Content = root;
+        var root = new DockPanel();
+        var card = Theme.Card(root, new Thickness(16));
+        card.Margin = new Thickness(4);
+        Content = card;
         var header = Ui.Stack();
         var heading = Ui.Stack(Orientation.Horizontal);
         var kind = title.Split(' ').Last();
-        if (kind is "Income" or "Expense" or "Transfer") { var symbol = Ui.Icon(kind == "Income" ? "arrow_up" : kind == "Expense" ? "arrow_down" : "arrow_swap", 36, kind == "Income" ? Ui.Green : kind == "Expense" ? Ui.Red : Ui.Ink); symbol.Margin = new Thickness(0,0,16,0); heading.Children.Add(symbol); }
-        heading.Children.Add(Ui.Text(title, 24, bold: true)); header.Children.Add(heading);
-        var sub = Ui.Text(subtitle, 13, Ui.Muted); sub.Margin = new Thickness(0,8,0,20); header.Children.Add(sub);
+        if (kind is "Income" or "Expense" or "Transfer") { var symbol = Ui.Icon(kind == "Income" ? "arrow_up" : kind == "Expense" ? "arrow_down" : "arrow_swap", 36, kind == "Income" ? Theme.Success : kind == "Expense" ? Theme.Error : Theme.Text); symbol.Margin = new Thickness(0,0,16,0); heading.Children.Add(symbol); }
+        heading.Children.Add(Theme.Label(title, 24, bold: true)); header.Children.Add(heading);
+        var sub = Theme.Label(subtitle, 13, Theme.Muted); sub.Margin = new Thickness(0,8,0,20); header.Children.Add(sub);
         DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var footer = Ui.Stack(); Error.Margin = new Thickness(0,12,0,8); footer.Children.Add(Error);
         var row = Ui.Stack(Orientation.Horizontal); row.HorizontalAlignment = HorizontalAlignment.Right;
-        var cancel = Ui.Button("Cancel", () => DialogResult = false); cancel.IsCancel = true;
-        Submit = Ui.Button(buttonText, () => { }, true); Submit.IsDefault = true;
+        var cancel = Theme.ActionButton("Cancel", () => DialogResult = false); cancel.IsCancel = true;
+        Submit = Theme.ActionButton(buttonText, () => { }, true); Submit.IsDefault = true;
         row.Children.Add(cancel); row.Children.Add(Submit); footer.Children.Add(row);
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
         root.Children.Add(new ScrollViewer { Content = Fields, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
@@ -48,7 +53,7 @@ public class FormWindow : Window
     {
         var row = new Grid { Margin = new Thickness(0,8,0,8) };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(124) }); row.ColumnDefinitions.Add(new ColumnDefinition());
-        var text = Ui.Text(label, 13, Ui.Ink); text.Margin = new Thickness(0,0,12,0); row.Children.Add(text);
+        var text = Theme.Label(label, 13, Theme.Text); text.Margin = new Thickness(0,0,12,0); row.Children.Add(text);
         Grid.SetColumn(input,1); row.Children.Add(input); Fields.Children.Add(row);
         if (label.Contains('*') && FormValidation.Input(input) is { } field)
             requiredFields.Add((field, label.Replace("*", "").Replace('\n',' ').Trim()));
@@ -73,12 +78,27 @@ public class FormWindow : Window
     public static TextBox MoneyInput(decimal value = 0) => new MoneyTextBox(value);
     public static TextBox DateInput(DateOnly value) => new() { Text = Display.Date(value), ToolTip = "MM/DD/YYYY — month/day/year", MaxLength = 10 };
     protected void DateField(string label, TextBox input)
-        => Field(label,DatePickerInput(input));
-    public static UIElement DatePickerInput(TextBox input)
+        => Field(label,DatePickerInput(input, Theme));
+    public static UIElement DatePickerInput(TextBox input) => DatePickerInput(input, WorkspaceTheme.Light);
+
+    internal static UIElement DatePickerInput(TextBox input, WorkspaceTheme theme)
     {
-        var row = new DockPanel(); var button = Ui.SquareIconButton("calendar", () => { }, "Choose date"); button.Margin = new Thickness(4,0,0,0);
+        var row = new DockPanel();
+        var button = Ui.SquareIconButton("calendar", () => { }, "Choose date", color: theme.Accent);
+        button.Margin = new Thickness(4,0,0,0);
+        System.Windows.Automation.AutomationProperties.SetName(button, "Choose date");
+        theme.StyleButton(button, outlined: true);
         var popup = new Popup { PlacementTarget = button, Placement = PlacementMode.Bottom, StaysOpen = false, AllowsTransparency = true };
-        var calendar = new Calendar(); popup.Child = Ui.Box(calendar, new Thickness(4));
+        var calendar = new Calendar();
+        if (!SystemParameters.HighContrast)
+        {
+            calendar.BorderThickness = new Thickness(0);
+            calendar.Background = Brushes.Transparent;
+            calendar.CalendarItemStyle = (Style)Application.Current.FindResource("WorkspaceCalendarItem");
+            calendar.CalendarDayButtonStyle = (Style)Application.Current.FindResource("WorkspaceCalendarDay");
+            calendar.CalendarButtonStyle = (Style)Application.Current.FindResource("WorkspaceCalendarPeriod");
+        }
+        var calendarCard = theme.Card(calendar, new Thickness(4)); theme.ApplyResources(calendarCard); popup.Child = calendarCard;
         var synchronizing = false;
         button.Click += (_, _) => {
             synchronizing = true;
@@ -107,7 +127,7 @@ public sealed class BankDialog : FormWindow
         var date = DateInput(existing?.OpeningDate ?? DateOnly.FromDateTime(DateTime.Today));
         var balance = MoneyInput(existing?.OpeningBalance ?? 0);
         Field("Bank Name *", name); DateField("Opening Balance\nDate *", date); Field("Opening Balance\n(Rp) *", balance);
-        var note = Ui.Text("The opening balance is the balance before the first transaction on this date.", 12, Ui.Muted); note.Margin = new Thickness(0,12,0,0); Fields.Children.Add(note);
+        var note = Theme.Label("The opening balance is the balance before the first transaction on this date.", 12, Theme.Muted); note.Margin = new Thickness(0,12,0,0); Fields.Children.Add(note);
         Submit.Click += (_, _) => Attempt(() => {
             FormValidation.Require(!doc.Banks.Any(b => b.Id != existing?.Id && string.Equals(b.Name,name.Text.Trim(),StringComparison.OrdinalIgnoreCase)),name,"A bank with this name already exists.");
             var bank = new Bank(existing?.Id ?? Guid.NewGuid(), name.Text.Trim(), ReadDate(date), FormValidation.Money(balance, emptyAsZero: true));
@@ -166,10 +186,10 @@ public sealed class TransactionDialog : FormWindow
         RefreshCategories(categories, catKind, existing?.CategoryId);
         DockPanel CategoryInput(ComboBox combo, CategoryKind categoryKind)
         {
-            var panel = new DockPanel(); var add = Ui.Button("New", () => {
+            var panel = new DockPanel(); var add = Theme.ActionButton("New", () => {
                 var dialog = new CategoryDialog(this, session.Document, forced: categoryKind);
                 if (dialog.ShowDialog() == true) { var copy = session.Document.Copy(); copy.Categories.Add(dialog.Result!); session.Apply(copy); RefreshCategories(combo, categoryKind, dialog.Result!.Id); }
-            }); add.Foreground = Ui.Accent; add.Padding = new Thickness(8,0,8,0); add.Margin = new Thickness(4,0,0,0); add.BorderThickness = new Thickness(0); add.MinWidth = 52; add.VerticalAlignment = VerticalAlignment.Center;
+            }); add.Foreground = Theme.Accent; add.Padding = new Thickness(8,0,8,0); add.Margin = new Thickness(4,0,0,0); add.BorderThickness = new Thickness(0); add.MinWidth = 52; add.VerticalAlignment = VerticalAlignment.Center;
             DockPanel.SetDock(add, Dock.Right); panel.Children.Add(add); panel.Children.Add(combo); return panel;
         }
         DateField("Date *", date); Field(kind == TransactionKind.Transfer ? "From Bank *" : "Bank *", bank);
@@ -177,7 +197,7 @@ public sealed class TransactionDialog : FormWindow
         var incomeBasis = new ComboBox { ItemsSource = new[] { "Before fee (gross)", "After fee (net received)" }, SelectedIndex = (int)(existing?.IncomeBasis ?? IncomeAmountBasis.BeforeFee) };
         if (kind == TransactionKind.Income) Field("Amount basis *", incomeBasis);
         Field("Amount (Rp) *", amount);
-        var summary = Ui.Text("", 13, Ui.Muted);
+        var summary = Theme.Label("", 13, Theme.Muted);
         Field(kind == TransactionKind.Transfer ? "Transfer Fee (Rp)" : "Admin Fee (Rp)", fee);
         void UpdateSummary()
         {
@@ -199,24 +219,26 @@ public sealed class TransactionDialog : FormWindow
         Field("Description", description);
         DebtTrackingEditor? debtEditor=null;
         if(kind!=TransactionKind.Transfer){
-            debtEditor=new DebtTrackingEditor(session,kind,existing,()=>ReadDate(date),()=>(bank.SelectedItem as Bank)?.Id,()=>FormValidation.Money(amount,true),()=>FormValidation.Money(fee,true),()=>incomeBasis.SelectedIndex==1,()=>Error.Text="",debtPreset,trackNewDebt);
-            Fields.Children.Add(Ui.Box(debtEditor,new Thickness(12)));
+            debtEditor=new DebtTrackingEditor(Theme,session,kind,existing,()=>ReadDate(date),()=>(bank.SelectedItem as Bank)?.Id,()=>FormValidation.Money(amount,true),()=>FormValidation.Money(fee,true),()=>incomeBasis.SelectedIndex==1,()=>Error.Text="",debtPreset,trackNewDebt);
+            Fields.Children.Add(Theme.Card(debtEditor,new Thickness(12)));
             date.TextChanged+=(_,_)=>debtEditor.Refresh();amount.TextChanged+=(_,_)=>debtEditor.Refresh();fee.TextChanged+=(_,_)=>debtEditor.Refresh();incomeBasis.SelectionChanged+=(_,_)=>debtEditor.Refresh();
             bank.SelectionChanged+=(_,_)=>debtEditor.Refresh();
         }
         if (kind == TransactionKind.Transfer)
         {
             var originalFields = Fields.Children.Cast<UIElement>().ToArray(); Fields.Children.Clear();
-            var details = Ui.Stack(); var heading = Ui.Text("Transfer Details",18,bold:true); heading.Margin = new Thickness(0,0,0,16); details.Children.Add(heading);
+            var details = Ui.Stack(); var heading = Theme.Label("Transfer Details",18,bold:true); heading.Margin = new Thickness(0,0,0,16); details.Children.Add(heading);
             foreach (var field in originalFields) details.Children.Add(field);
             var columns = new Grid(); columns.ColumnDefinitions.Add(new ColumnDefinition()); columns.ColumnDefinitions.Add(new ColumnDefinition());
             details.Margin = new Thickness(0,0,24,0); columns.Children.Add(details);
             allocations = new AllocationEditor(this,session,() => FormValidation.Money(amount,emptyAsZero:true),()=>(bank.SelectedItem as Bank)?.Id,existing?.Allocations,existing is null?debtPreset:null,existing is null&&trackNewDebt);
-            var right = new Border { BorderBrush = Ui.Line, BorderThickness = new Thickness(1,0,0,0), Padding = new Thickness(24,0,0,0), Child = allocations }; Grid.SetColumn(right,1); columns.Children.Add(right); Fields.Children.Add(columns);
+            var right = new Border { BorderBrush = Theme.Rule, BorderThickness = new Thickness(1,0,0,0), Padding = new Thickness(24,0,0,0), Child = allocations }; Grid.SetColumn(right,1); columns.Children.Add(right); Fields.Children.Add(columns);
             amount.TextChanged += (_, _) => allocations.UpdateTotals();
             bank.SelectionChanged+=(_,_)=>allocations.UpdateTotals();
         }
-        summary.Margin = new Thickness(0,8,0,0); Fields.Children.Add(Ui.Box(summary, new Thickness(12), Ui.Brush("#F6F6F9"))); var feeHint = Ui.Text("Fees are recorded automatically as a linked Admin Fee expense.",12,Ui.Muted); feeHint.Margin = new Thickness(0,12,0,0); Fields.Children.Add(feeHint);
+        var summaryCard = Theme.Card(summary, new Thickness(12));
+        summaryCard.Margin = new Thickness(0,8,0,0); Fields.Children.Add(summaryCard);
+        var feeHint = Theme.Label("Fees are recorded automatically as a linked Admin Fee expense.",12,Theme.Muted); feeHint.Margin = new Thickness(0,12,0,0); Fields.Children.Add(feeHint);
         Submit.Click += (_, _) => Attempt(() => {
             var sourceBank = bank.SelectedItem as Bank;
             FormValidation.Require(sourceBank is not null,bank,"Choose a bank.");
@@ -266,11 +288,11 @@ public sealed class ManagerWindow : Window
 {
     public ManagerWindow(Window owner, DocumentSession session, bool banks, Action changed)
     {
-        Ui.ApplyWindowStyle(this);
+        var theme = WorkspaceTheme.ApplyDialog(this, owner);
         Owner = owner; Title = (banks ? "Bank Accounts" : "Categories") + " — Piggy"; Width = 780; Height = 520; MinWidth = 560; MinHeight = 360; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var root = new DockPanel { Margin = new Thickness(24) }; Content = root;
-        var heading = Ui.Text(banks ? "Bank Accounts" : "Categories", 22, bold: true); heading.Margin = new Thickness(0,0,0,16); DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
-        var grid = new DataGrid();
+        var heading = theme.Label(banks ? "Bank Accounts" : "Categories", 22, bold: true); heading.Margin = new Thickness(0,0,0,16); DockPanel.SetDock(heading, Dock.Top); root.Children.Add(heading);
+        var grid = theme.DialogGrid();
         void Refresh() { grid.ItemsSource = banks ? session.Document.Banks.OrderBy(b => b.Name).Select(b => new ManagerRow(b.Id, b.Name, Display.Date(b.OpeningDate), Display.Money(b.OpeningBalance))).ToList() : session.Document.Categories.OrderBy(c => c.Kind).ThenBy(c => c.Name).Select(c => new ManagerRow(c.Id, c.Name, c.Kind.ToString(), "")).ToList(); changed(); }
         void Edit(bool create)
         {
@@ -280,9 +302,9 @@ public sealed class ManagerWindow : Window
             else { var dialog = new CategoryDialog(this, session.Document, create ? null : session.Document.Categories.First(c => c.Id == selected!.Id)); if (dialog.ShowDialog() != true) return; copy.Categories.RemoveAll(c => c.Id == dialog.Result!.Id); copy.Categories.Add(dialog.Result!); }
             session.Apply(copy); Refresh();
         }
-        var controls = Ui.Stack(Orientation.Horizontal); controls.Children.Add(Ui.Button(banks ? "Add Bank" : "Add Category", () => Edit(true), true));
-        var edit = Ui.Button("Edit", () => Edit(false)); edit.IsEnabled = false; controls.Children.Add(edit);
-        var delete = Ui.Button("Delete", () => {
+        var controls = Ui.Stack(Orientation.Horizontal); controls.Children.Add(theme.ActionButton(banks ? "Add Bank" : "Add Category", () => Edit(true), true));
+        var edit = theme.ActionButton("Edit", () => Edit(false)); edit.IsEnabled = false; controls.Children.Add(edit);
+        var delete = theme.ActionButton("Delete", () => {
             if (grid.SelectedItem is not ManagerRow selected) return;
             var used = session.Document.Transactions.Any(t => banks ? t.BankId == selected.Id || t.ToBankId == selected.Id : t.CategoryId == selected.Id || t.FeeCategoryId == selected.Id);
             used |= banks && session.Document.WishlistEvents.Any(e=>e.FromBankId==selected.Id||e.ToBankId==selected.Id);
@@ -292,8 +314,8 @@ public sealed class ManagerWindow : Window
         }); delete.IsEnabled = false; controls.Children.Add(delete);
         grid.SelectionChanged += (_, _) => { edit.IsEnabled = delete.IsEnabled = grid.SelectedItem is not null; }; grid.MouseDoubleClick += (_, e) => { if (e.OriginalSource is DependencyObject d && FindRow(d) is not null) Edit(false); };
         DockPanel.SetDock(controls, Dock.Top); root.Children.Add(controls);
-        var close = Ui.Button("Done", Close); close.HorizontalAlignment = HorizontalAlignment.Right; DockPanel.SetDock(close, Dock.Bottom); root.Children.Add(close);
-        grid.Columns.Add(Ui.Column(banks ? "Bank Name" : "Category Name", "Name", 2)); grid.Columns.Add(Ui.Column(banks ? "Opening Date" : "Type", "Detail", 1)); if (banks) grid.Columns.Add(Ui.Column("Opening Balance", "Value", 1.5, true)); root.Children.Add(grid); Refresh();
+        var close = theme.ActionButton("Done", Close); close.HorizontalAlignment = HorizontalAlignment.Right; DockPanel.SetDock(close, Dock.Bottom); root.Children.Add(close);
+        grid.Columns.Add(Ui.Column(banks ? "Bank Name" : "Category Name", "Name", 2)); grid.Columns.Add(Ui.Column(banks ? "Opening Date" : "Type", "Detail", 1)); if (banks) grid.Columns.Add(Ui.Column("Opening Balance", "Value", 1.5, true)); root.Children.Add(theme.Card(grid, new Thickness(8))); Refresh();
     }
     private static DataGridRow? FindRow(DependencyObject? element) { while (element is not null && element is not DataGridRow) element = VisualTreeHelper.GetParent(element); return element as DataGridRow; }
     private sealed record ManagerRow(Guid Id, string Name, string Detail, string Value);
@@ -301,28 +323,30 @@ public sealed class ManagerWindow : Window
 
 public sealed class ConfirmDialog : Window
 {
+    private readonly WorkspaceTheme theme;
+
     private ConfirmDialog(Window owner, string heading, string message)
     {
-        Ui.ApplyWindowStyle(this);
+        theme = WorkspaceTheme.ApplyDialog(this, owner);
         Owner = owner; Title = "Piggy"; Width = 540; SizeToContent = SizeToContent.Height; MaxHeight = SystemParameters.WorkArea.Height - 40; ResizeMode = ResizeMode.NoResize; WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        var stack = Ui.Stack(); stack.Margin = new Thickness(20); Content = stack;
-        stack.Children.Add(Ui.Text(heading, 20, bold: true)); var text = Ui.Text(message, 14, Ui.Muted); text.Margin = new Thickness(0,16,0,24); stack.Children.Add(text);
+        var stack = Ui.Stack(); Content = theme.Card(stack, new Thickness(20));
+        stack.Children.Add(theme.Label(heading, 20, bold: true)); var text = theme.Label(message, 14, theme.Muted); text.Margin = new Thickness(0,16,0,24); stack.Children.Add(text);
         Buttons.HorizontalAlignment = HorizontalAlignment.Right; stack.Children.Add(Buttons);
     }
     private readonly StackPanel Buttons = Ui.Stack(Orientation.Horizontal);
     public static bool Confirm(Window owner, string heading, string message, string action)
     {
-        var dialog = new ConfirmDialog(owner, heading, message); var cancel = Ui.Button("Cancel", () => dialog.DialogResult = false); cancel.IsCancel = true;
-        dialog.Buttons.Children.Add(cancel); dialog.Buttons.Children.Add(Ui.Button(action, () => dialog.DialogResult = true, true)); return dialog.ShowDialog() == true;
+        var dialog = new ConfirmDialog(owner, heading, message); var cancel = dialog.theme.ActionButton("Cancel", () => dialog.DialogResult = false); cancel.IsCancel = true;
+        dialog.Buttons.Children.Add(cancel); dialog.Buttons.Children.Add(dialog.theme.ActionButton(action, () => dialog.DialogResult = true, true)); return dialog.ShowDialog() == true;
     }
     public static void Alert(Window owner, string heading, string message)
     {
-        var dialog = new ConfirmDialog(owner, heading, message); var ok = Ui.Button("OK", () => dialog.DialogResult = true, true); ok.IsDefault = true; dialog.Buttons.Children.Add(ok); dialog.ShowDialog();
+        var dialog = new ConfirmDialog(owner, heading, message); var ok = dialog.theme.ActionButton("OK", () => dialog.DialogResult = true, true); ok.IsDefault = true; dialog.Buttons.Children.Add(ok); dialog.ShowDialog();
     }
     public static string Unsaved(Window owner, string name)
     {
         var result = "Cancel"; var dialog = new ConfirmDialog(owner, "Save changes?", $"Do you want to save changes to {name}?\n\nYour changes will be lost if you don't save them.");
-        foreach (var label in new[] { "Save", "Don't Save", "Cancel" }) { var choice = label; var button = Ui.Button(label, () => { result = choice; dialog.DialogResult = true; }, label == "Save"); if (label == "Cancel") button.IsCancel = true; dialog.Buttons.Children.Add(button); }
+        foreach (var label in new[] { "Save", "Don't Save", "Cancel" }) { var choice = label; var button = dialog.theme.ActionButton(label, () => { result = choice; dialog.DialogResult = true; }, label == "Save"); if (label == "Cancel") button.IsCancel = true; dialog.Buttons.Children.Add(button); }
         dialog.ShowDialog(); return result;
     }
 }

@@ -211,7 +211,8 @@ public static class WishlistService
         if(activity.Kind==WishlistEventKind.Edited){var created=doc.WishlistEvents.Single(e=>e.WishlistId==activity.WishlistId&&e.Kind==WishlistEventKind.Created);Require(date>=created.Date,$"Update Date cannot be before Planned Date ({Display.Date(created.Date)}). Correct Planned Date first if needed.");}
         else if(activity.Kind==WishlistEventKind.Created)Require(!doc.WishlistEvents.Any(e=>e.WishlistId==activity.WishlistId&&e.Kind==WishlistEventKind.Edited&&e.Date<date),"Planned Date cannot be after an existing Update Date. Correct the earlier update dates first if needed.");
         else CheckFundsDate(doc,activity,date);
-        var d=doc.Copy();d.WishlistEvents[index]=activity with {Date=date};
+        var group = ActivityDateGroup(doc, activity).Select(e => e.Id).ToHashSet();
+        var d=doc.Copy();d.WishlistEvents=d.WishlistEvents.Select(e=>group.Contains(e.Id)?e with {Date=date}:e).ToList();
         if(activity.Kind is WishlistEventKind.Purchased or WishlistEventKind.Transferred){
             var reversed=activity.Kind==WishlistEventKind.Purchased&&doc.WishlistEvents.Any(e=>e.Kind==WishlistEventKind.PurchaseCorrected&&e.TransactionId==activity.TransactionId);
             var transactionIndex=d.Transactions.FindIndex(t=>t.Id==activity.TransactionId);
@@ -284,10 +285,27 @@ public static class WishlistService
     }
     private static void CheckFundsDate(FinanceDocument doc,WishlistEvent activity,DateOnly date)
     {
-        var history=doc.WishlistEvents.Where(e=>e.WishlistId==activity.WishlistId && e.Kind is not WishlistEventKind.Created and not WishlistEventKind.Edited).ToList();
+        var group = ActivityDateGroup(doc, activity);
+        var history=doc.WishlistEvents.Where(e=>e.WishlistId==activity.WishlistId && e.Kind is not WishlistEventKind.Created and not WishlistEventKind.Edited && (e.Id==activity.Id || !group.Contains(e))).ToList();
         var position=history.FindIndex(e=>e.Id==activity.Id);
         if(position>0)Require(date>=history[position-1].Date,$"Choose a date on or after {WishlistPresentation.ActivityName(history[position-1].Kind)} ({Display.Date(history[position-1].Date)}). To move several activities earlier, edit the oldest first.");
         if(position<history.Count-1)Require(date<=history[position+1].Date,$"Choose a date on or before {WishlistPresentation.ActivityName(history[position+1].Kind)} ({Display.Date(history[position+1].Date)}). To move several activities later, edit the newest first.");
+    }
+    internal static IReadOnlyList<WishlistEvent> ActivityDateGroup(FinanceDocument doc, WishlistEvent activity)
+    {
+        var group = new List<WishlistEvent> { activity };
+        var index = doc.WishlistEvents.FindIndex(e => e.Id == activity.Id);
+        if (index < 0 || activity.Kind != WishlistEventKind.Purchased || activity.AllocationGoalId is not Guid goal) return group;
+        // shortcut: format 12 has no operation ID; use adjacent surplus pairs until the format records ownership.
+        for (var i = index + 1; i + 1 < doc.WishlistEvents.Count; i += 2)
+        {
+            var released = doc.WishlistEvents[i]; var allocated = doc.WishlistEvents[i + 1];
+            if (!released.InternalFunding || !allocated.InternalFunding || released.Kind != WishlistEventKind.Released || allocated.Kind != WishlistEventKind.Allocated ||
+                released.WishlistId != activity.WishlistId || allocated.WishlistId != activity.WishlistId || released.Date != activity.Date || allocated.Date != activity.Date ||
+                released.AllocationGoalId != goal || allocated.AllocationGoalId is not null || released.FromBankId != allocated.ToBankId || released.Amount != allocated.Amount) break;
+            group.Add(released); group.Add(allocated);
+        }
+        return group;
     }
     public static FinanceDocument EditPurchaseDate(FinanceDocument doc,Guid activityId,DateOnly date)
     {

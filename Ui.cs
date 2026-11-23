@@ -110,14 +110,18 @@ public static class Ui
         }
         for (var i = 0; i < arrows.Length; i++) table.Columns[i].SortDirection = arrows[i];
     }
-    public static Grid LedgerSurface(DataGrid table, string title, string message)
+    public static Grid LedgerSurface(DataGrid table, string title, string message, Brush? ink = null, Brush? muted = null)
     {
         var surface = new Grid(); surface.Children.Add(table);
         var text = Stack(); text.VerticalAlignment = VerticalAlignment.Center;
-        var heading = Text(title,14,Ink,true); heading.TextAlignment = TextAlignment.Center;
-        var detail = Text(message,13,Muted); detail.TextAlignment = TextAlignment.Center; detail.Margin = new Thickness(0,8,0,0);
+        var heading = Text(title,14,ink ?? Ink,true); heading.TextAlignment = TextAlignment.Center;
+        var detail = Text(message,13,muted ?? Muted); detail.TextAlignment = TextAlignment.Center; detail.Margin = new Thickness(0,8,0,0);
         text.Children.Add(heading); text.Children.Add(detail);
-        var empty = new Border { Child = text, Background = Brushes.White, Padding = new Thickness(24), Margin = new Thickness(13,33,13,1), IsHitTestVisible = false };
+        var margin = table.Margin;
+        var border = table.BorderThickness;
+        var empty = new Border { Child = text, Background = table.Background ?? Brushes.White, Padding = new Thickness(24),
+            Margin = new Thickness(margin.Left+border.Left,margin.Top+table.ColumnHeaderHeight+border.Top,
+                margin.Right+border.Right,margin.Bottom+border.Bottom), IsHitTestVisible = false };
         var visibility = new Style(typeof(Border)); visibility.Setters.Add(new Setter(UIElement.VisibilityProperty,Visibility.Collapsed));
         var noRows = new DataTrigger { Binding = new Binding("HasItems") { Source = table }, Value = false };
         noRows.Setters.Add(new Setter(UIElement.VisibilityProperty,Visibility.Visible)); visibility.Triggers.Add(noRows); empty.Style = visibility;
@@ -169,9 +173,9 @@ public static class Ui
     {
         return LedgerIconColumn("Type", "Type", 56, imagePath: "TypeImage");
     }
-    public static DataGridTemplateColumn AllocationColumn() => LedgerIconColumn("Allocations", "Allocation", 48, "target", "HasAllocation");
-    public static DataGridTemplateColumn DebtColumn() => LedgerIconColumn("Debt", "Debt", 48, "money", "HasDebt", tooltipPath: "DebtTooltip");
-    private static DataGridTemplateColumn LedgerIconColumn(string label, string path, double width, string? icon = null, string? visiblePath = null, string? imagePath = null, string? tooltipPath = null)
+    public static DataGridTemplateColumn AllocationColumn(Brush? accent = null, Brush? muted = null) => LedgerIconColumn("Allocations", "Allocation", 48, "target", "HasAllocation", accent: accent, muted: muted);
+    public static DataGridTemplateColumn DebtColumn(Brush? accent = null, Brush? muted = null) => LedgerIconColumn("Debt", "Debt", 48, "money", "HasDebt", tooltipPath: "DebtTooltip", accent: accent, muted: muted);
+    private static DataGridTemplateColumn LedgerIconColumn(string label, string path, double width, string? icon = null, string? visiblePath = null, string? imagePath = null, string? tooltipPath = null, Brush? accent = null, Brush? muted = null)
     {
         var cell = new FrameworkElementFactory(typeof(Border));
         cell.SetValue(Border.BackgroundProperty, Brushes.Transparent);
@@ -186,7 +190,7 @@ public static class Ui
         image.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
         image.SetBinding(AutomationProperties.NameProperty, new Binding(path));
         if (imagePath is not null) image.SetBinding(Image.SourceProperty, new Binding(imagePath));
-        else image.SetValue(Image.SourceProperty, Drawing(icon!, Accent));
+        else image.SetValue(Image.SourceProperty, Drawing(icon!, accent ?? Accent));
         cell.AppendChild(image);
         var headerStyle = new Style(typeof(DataGridColumnHeader), (Style)Application.Current.FindResource(typeof(DataGridColumnHeader)));
         headerStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(0)));
@@ -198,7 +202,7 @@ public static class Ui
         object header = label;
         if (icon is not null)
         {
-            var headerIcon = Icon(icon, 16, Muted); headerIcon.ToolTip = label;
+            var headerIcon = Icon(icon, 16, muted ?? Muted); headerIcon.ToolTip = label;
             AutomationProperties.SetName(headerIcon, label); header = headerIcon;
         }
         return new DataGridTemplateColumn { Header = header, HeaderStyle = headerStyle, CellStyle = cellStyle,
@@ -235,12 +239,15 @@ public sealed class LedgerRow
             ($"{row.Date} {row.Type} {row.Bank} {row.Category} {row.Description} {row.Allocation} {row.Debt} {row.Amount}")
                 .Contains(term, StringComparison.OrdinalIgnoreCase);
     }
-    public static IEnumerable<LedgerRow> From(FinanceDocument doc, Transaction t)
+    public static IEnumerable<LedgerRow> From(FinanceDocument doc, Transaction t) => From(doc, t, null);
+
+    internal static IEnumerable<LedgerRow> From(FinanceDocument doc, Transaction t, WorkspaceTheme? theme)
     {
         var icon = t.Kind == TransactionKind.Income ? "arrow_up" : t.Kind == TransactionKind.Expense ? "arrow_down" : "arrow_swap";
-        var brush = t.Kind == TransactionKind.Income ? Ui.Green : t.Kind == TransactionKind.Expense ? Ui.Red : Ui.Ink;
+        var expense = theme?.Error ?? Ui.Red;
+        var brush = t.Kind == TransactionKind.Income ? theme?.Success ?? Ui.Green : t.Kind == TransactionKind.Expense ? expense : theme?.Accent ?? Ui.Ink;
         var principal = t.Kind == TransactionKind.Income ? t.GrossIncome : t.Amount;
         yield return new() { Item = t, Date = Display.Date(t.Date), SortDate = t.Date, Type = t.Kind.ToString(), TypeImage = Ui.Drawing(icon, brush), Bank = doc.BankName(t.BankId) + (t.ToBankId is Guid to ? " → " + doc.BankName(to) : ""), Category = doc.CategoryName(t.CategoryId), Description = t.Description, Allocation = doc.AllocationSummary(t),Debt=doc.TransactionDebtLabel(t), Amount = Display.Money(principal), NumericAmount = principal };
-        if (t.Fee > 0) yield return new() { Item = t, IsFee = true, Date = Display.Date(t.Date), SortDate = t.Date, Type = "Expense", TypeImage = Ui.Drawing("arrow_down", Ui.Red), Bank = doc.BankName(t.BankId), Category = FinanceDocument.AdminFeeName, Description = t.Kind + " fee" + (t.Description.Length > 0 ? " · " + t.Description : ""),Debt=!doc.RelatedDebtIds(t).Any()?"—":doc.TransactionDebtLabel(t)+" (Admin Fee)", Amount = Display.Money(t.Fee), NumericAmount = t.Fee };
+        if (t.Fee > 0) yield return new() { Item = t, IsFee = true, Date = Display.Date(t.Date), SortDate = t.Date, Type = "Expense", TypeImage = Ui.Drawing("arrow_down", expense), Bank = doc.BankName(t.BankId), Category = FinanceDocument.AdminFeeName, Description = t.Kind + " fee" + (t.Description.Length > 0 ? " · " + t.Description : ""),Debt=!doc.RelatedDebtIds(t).Any()?"—":doc.TransactionDebtLabel(t)+" (Admin Fee)", Amount = Display.Money(t.Fee), NumericAmount = t.Fee };
     }
 }

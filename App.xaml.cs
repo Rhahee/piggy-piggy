@@ -20,7 +20,8 @@ public partial class App : Application
         base.OnStartup(e);
         if (Environment.ProcessPath is string executable)
             MyPiggyBank.Core.InstallationRegistration.Synchronize(executable, UpdateSession.Version);
-        var window = new MainWindow(); window.Show();
+        var window = new MainWindow { WindowState = WindowState.Maximized };
+        window.Show();
         if (e.Args.Length == 1) window.OpenPath(e.Args[0]);
     }
 

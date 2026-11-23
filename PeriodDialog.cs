@@ -26,10 +26,10 @@ public sealed class PeriodDialog : FormWindow
         var weekend = new ComboBox { ItemsSource = new[] { "Keep original date", "Previous working day (Friday)", "Next working day (Monday)" }, SelectedIndex = (int)(existing?.Weekend ?? WeekendAdjustment.KeepDate) };
         var first = DateInput(Schedule is not null && existing is not null ? Schedule.ActualPayday(current.Month) : current.Month);
         Field("Monthly payday *",day); var dayRow = LastRow(); Field("Weekend rule *",weekend); var weekendRow = LastRow(); DateField("Actual payday *",first); var firstRow = LastRow();
-        var help = Ui.Text("The first selected period starts on Actual payday. Changes apply from this month; earlier payday rules are retained. The preceding cycle ends the day before this payday. Correct Actual payday manually for public holidays.",12,Ui.Muted); help.Margin = new Thickness(0,8,0,12); Fields.Children.Add(help);
+        var help = Theme.Label("The first selected period starts on Actual payday. Changes apply from this month; earlier payday rules are retained. The preceding cycle ends the day before this payday. Correct Actual payday manually for public holidays.",12,Theme.Muted); help.Margin = new Thickness(0,8,0,12); Fields.Children.Add(help);
         var start = DateInput(current.CustomStart); var end = DateInput(current.CustomEnd);
         DateField("Start date *",start); var startRow = LastRow(); DateField("End date *",end); var endRow = LastRow();
-        var preview = Ui.Text("",14,Ui.Ink,true); Fields.Children.Add(Ui.Box(preview,new Thickness(12),Ui.Brush("#F6F6F9")));
+        var preview = Theme.Label("",14,Theme.Text,true); Fields.Children.Add(Theme.Card(preview,new Thickness(12)));
         var applying = false;
 
         DateOnly ReadMonth()
@@ -68,10 +68,10 @@ public sealed class PeriodDialog : FormWindow
                     first.Text = Display.Date(PaySchedule.ScheduledPayday(ReadMonth(),payday,(WeekendAdjustment)weekend.SelectedIndex));
                 var value = Read(); var range = value.Period.Range(value.Schedule);
                 preview.Text = $"{Display.Date(range.Start)} – {Display.Date(range.End)}\nIncome, expenses and transactions include both dates.";
-                preview.Foreground = Ui.Ink;
+                preview.Foreground = Theme.Text;
             }
             catch (Exception e) when (e is InvalidDataException or ArgumentOutOfRangeException)
-            { preview.Text = e is InvalidDataException ? e.Message : "Choose dates within the supported range."; preview.Foreground = Ui.Muted; }
+            { preview.Text = e is InvalidDataException ? e.Message : "Choose dates within the supported range."; preview.Foreground = Theme.Muted; }
             finally { applying = false; }
         }
         void LoadMonth()

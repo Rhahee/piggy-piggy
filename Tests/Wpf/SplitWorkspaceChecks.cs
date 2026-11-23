@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -11,6 +12,12 @@ internal static class SplitWorkspaceChecks
     private static object Field(MainWindow window, string name) => typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
     private static Task Idle(MainWindow window) => window.Dispatcher.InvokeAsync(() => window.UpdateLayout(), DispatcherPriority.ApplicationIdle).Task;
     private static void Require(bool value, string message) { if (!value) throw new Exception(message); }
+    private static IEnumerable<T> Visuals<T>(DependencyObject element) where T : DependencyObject
+    {
+        if (element is T item) yield return item;
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(element); i++)
+            foreach (var child in Visuals<T>(VisualTreeHelper.GetChild(element, i))) yield return child;
+    }
 
     private static void CheckPage(string page)
     {
@@ -32,10 +39,18 @@ internal static class SplitWorkspaceChecks
                 typeof(MainWindow).GetField("page", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, page);
                 typeof(MainWindow).GetMethod("Render", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!.Invoke(window, null);
                 await Idle(window);
+                Visuals<CheckBox>(window).Single(toggle => AutomationProperties.GetName(toggle) == "Dark theme").IsChecked = true;
+                await Idle(window);
                 var layout = (DockPanel)((ContentControl)Field(window, "body")).Content;
                 var viewport = layout.Children.OfType<ScrollViewer>().Last();
                 var workspace = (DockPanel)((Grid)viewport.Content).Children[0];
                 var split = workspace.Children.OfType<Grid>().Last();
+                var detailField = page == "Wishlist" ? "wishlistDetailScroll" : "debtDetailScroll";
+                Require(((ScrollViewer)Field(window, detailField)).Parent is Border { Background: SolidColorBrush surface, Padding.Right: > 0 } &&
+                    surface.Color == Color.FromRgb(0x25, 0x26, 0x32), page + " detail and its scrollbar must sit inside the dark card.");
+                var listField = page == "Wishlist" ? "wishlistListScroll" : "debtListScroll";
+                Require(((ScrollViewer)Field(window, listField)).Parent is Border { CornerRadius.TopLeft: 12, Padding.Right: > 0 },
+                    page + " list and its scrollbar must sit inside a rounded card.");
                 var wideWindowWidth = window.ActualWidth;
                 // This is the preferred column width left by dragging the divider.
                 split.ColumnDefinitions[0].Width = new GridLength(500);
@@ -45,7 +60,7 @@ internal static class SplitWorkspaceChecks
                 async Task CheckDetail()
                 {
                     viewport.ScrollToRightEnd(); await Idle(window);
-                    var detail = (ScrollViewer)Field(window, page == "Wishlist" ? "wishlistDetailScroll" : "debtDetailScroll");
+                    var detail = (ScrollViewer)Field(window, detailField);
                     var bounds = detail.TransformToAncestor(viewport).TransformBounds(new Rect(0, 0, detail.ActualWidth, detail.ActualHeight));
                     Require(bounds.Right <= viewport.ViewportWidth + 1, page + " detail right edge cannot be reached by scrolling.");
                     viewport.ScrollToLeftEnd(); await Idle(window);

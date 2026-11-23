@@ -43,18 +43,18 @@ internal sealed class UpdateSession : IDisposable
     {
         var dialog = new Window { Owner = owner, Title = "Update Available — Piggy", Width = 560, Height = 500,
             ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        Ui.ApplyWindowStyle(dialog);
-        var panel = Ui.Stack(); panel.Margin = new Thickness(20); dialog.Content = panel;
-        panel.Children.Add(Ui.Text(release.IsVersionTransition ? "Version Transition" : "Update Available",24,bold:true));
-        var version = Ui.Text($"Installed: v{AppVersion.Format(Version)}    Available: v{AppVersion.Format(release.Version)}",14,Ui.Muted);
+        var theme = WorkspaceTheme.ApplyDialog(dialog, owner);
+        var panel = Ui.Stack(); dialog.Content = theme.Card(panel, new Thickness(20));
+        panel.Children.Add(theme.Label(release.IsVersionTransition ? "Version Transition" : "Update Available",24,bold:true));
+        var version = theme.Label($"Installed: v{AppVersion.Format(Version)}    Available: v{AppVersion.Format(release.Version)}",14,theme.Muted);
         version.Margin = new Thickness(0,12,0,12); panel.Children.Add(version);
         panel.Children.Add(new TextBox { Text = string.IsNullOrWhiteSpace(release.Notes) ? "No release notes provided." : release.Notes,
             IsReadOnly = true, TextWrapping = TextWrapping.Wrap, Height = 180, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
-        var status = Ui.Text("Download, verify and restart automatically. Your .mpb documents stay in place.",14,Ui.Muted);
+        var status = theme.Label("Download, verify and restart automatically. Your .mpb documents stay in place.",14,theme.Muted);
         if (release.IsVersionTransition) status.Text = "The version numbering is changing. Your features and .mpb documents are retained. Download, verify and restart automatically.";
         status.Margin = new Thickness(0,12,0,12); panel.Children.Add(status);
         var buttons = Ui.Stack(Orientation.Horizontal); buttons.HorizontalAlignment = HorizontalAlignment.Right;
-        var cancel = Ui.Button("Cancel",dialog.Close); var install = Ui.Button("Update and Restart",()=>{},true);
+        var cancel = theme.ActionButton("Cancel",dialog.Close); var install = theme.ActionButton("Update and Restart",()=>{},true);
         if (release.Checksum is null) { install.IsEnabled = false; status.Text = "The update package is not ready for automatic installation yet. Please check again later."; }
         install.Margin = new Thickness(8,0,0,0); buttons.Children.Add(cancel); buttons.Children.Add(install); panel.Children.Add(buttons);
         var cancellation = new CancellationTokenSource();
@@ -97,22 +97,32 @@ internal sealed class UpdateIndicator : StackPanel
     private readonly Image icon;
     private readonly Border badge;
     private readonly UpdateSession session;
+    private readonly WorkspaceTheme? theme;
 
-    public UpdateIndicator(Window owner, UpdateSession session)
+    public static TextBlock VersionLabel(Brush? color = null) =>
+        Ui.Text(AppVersion.Format(UpdateSession.Version), 12, color ?? Ui.Muted);
+
+    public UpdateIndicator(Window owner, UpdateSession session, WorkspaceTheme? theme = null, bool showVersion = true)
     {
-        this.session = session; Orientation = Orientation.Horizontal; VerticalAlignment = VerticalAlignment.Center;
-        var version = Ui.Text("v" + AppVersion.Format(UpdateSession.Version),12,Ui.Muted); Children.Add(version);
-        Children.Add(new Border { Width = 1, Height = 12, Background = Ui.Line, Margin = new Thickness(12,0,12,0) });
-        var grid = new Grid { Width = 36, Height = 36 };
-        button = Ui.SquareIconButton("arrow_sync",()=>{},"Check for updates",32);
-        button.HorizontalAlignment = HorizontalAlignment.Left; button.VerticalAlignment = VerticalAlignment.Bottom;
+        this.session = session; this.theme = theme; Orientation = Orientation.Horizontal; VerticalAlignment = VerticalAlignment.Center;
+        if (showVersion)
+        {
+            Children.Add(VersionLabel());
+            Children.Add(new Border { Width = 1, Height = 12, Background = Ui.Line, Margin = new Thickness(12,0,12,0) });
+        }
+        var grid = new Grid { Width = showVersion ? 36 : 30, Height = showVersion ? 36 : 30 };
+        button = Ui.SquareIconButton("arrow_sync",()=>{},"Check for updates",showVersion ? 32 : 28);
+        button.HorizontalAlignment = HorizontalAlignment.Left;
+        button.VerticalAlignment = showVersion ? VerticalAlignment.Bottom : VerticalAlignment.Center;
         button.Style = (Style)Application.Current.FindResource("UpdateIconButton"); button.BorderThickness = new Thickness(1);
-        icon = Ui.Icon("arrow_sync",20); button.Content = icon;
+        theme?.StyleButton(button, outlined: true);
+        icon = Ui.Icon("arrow_sync",showVersion ? 20 : 14); button.Content = icon;
         button.Click += async (_,_) => await session.ActivateAsync(owner);
         grid.Children.Add(button);
-        badge = new Border { Width = 14, Height = 14, Background = Ui.Accent, HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top, IsHitTestVisible = false, Child = new TextBlock { Text = "!", Foreground = Brushes.White,
-                FontSize = 11, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
+        var badgeSize = showVersion ? 14 : 11;
+        badge = new Border { Width = badgeSize, Height = badgeSize, Background = theme?.Accent ?? Ui.Accent, HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top, IsHitTestVisible = false, Child = new TextBlock { Text = "!", Foreground = theme?.OnAccent ?? Brushes.White,
+                FontSize = showVersion ? 11 : 9, FontWeight = FontWeights.Bold, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center } };
         grid.Children.Add(badge); Children.Add(grid);
         Loaded += (_,_) => { session.Changed += Refresh; Refresh(); };
         Unloaded += (_,_) => session.Changed -= Refresh;
@@ -122,12 +132,14 @@ internal sealed class UpdateIndicator : StackPanel
     private void Refresh()
     {
         var current = session.Result?.Status;
-        var color = current == UpdateStatus.UpToDate ? Ui.Green : current == UpdateStatus.Available ? Ui.Accent : Ui.Muted;
+        var muted = theme?.Muted ?? Ui.Muted;
+        var surface = theme?.Surface ?? Brushes.White;
+        var outline = theme?.Outline ?? Ui.Line;
+        var color = !session.Checking && current == UpdateStatus.Available ? theme?.Accent ?? Ui.Accent : muted;
         icon.Source = Ui.Drawing("arrow_sync",color);
-        button.Background = current == UpdateStatus.UpToDate ? Ui.Brush("#F2FBF5") : Brushes.White;
-        button.BorderBrush = current == UpdateStatus.UpToDate ? Ui.Green : Ui.Line;
+        button.Background = surface;
+        button.BorderBrush = outline;
         badge.Visibility = !session.Checking && current == UpdateStatus.Available ? Visibility.Visible : Visibility.Collapsed;
-        if (session.Checking) { icon.Source = Ui.Drawing("arrow_sync",Ui.Muted); button.Background = Brushes.White; button.BorderBrush = Ui.Line; }
         button.IsEnabled = !session.Checking;
         var hint = session.Checking ? "Checking for updates…" : current switch {
             UpdateStatus.UpToDate => "Up to date — click to check again",

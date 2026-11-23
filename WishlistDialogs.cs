@@ -21,7 +21,7 @@ internal sealed class WishlistDetailsDialog : FormWindow
         Field("Wishlist type", type);
         Field("Name *",name);DateField("Planned Date *",plannedDate);if(existing is not null)DateField("Update Date *",updateDate);Field("Target Amount\n(Rp) *",target);DateField("Target Date",date);Field("Priority",priority);Field("Notes",notes);
         var targetRow = (FrameworkElement)target.Parent;
-        var conversionNote = Ui.Text(existing is null ? "" : $"First goal: {existing.Name} · {Display.Money(existing.TargetAmount)}", 13, Ui.Muted);
+        var conversionNote = Theme.Label(existing is null ? "" : $"First goal: {existing.Name} · {Display.Money(existing.TargetAmount)}", 13, Theme.Muted);
         AddFields(conversionNote);
         void ShowTarget()
         {
@@ -30,7 +30,7 @@ internal sealed class WishlistDetailsDialog : FormWindow
         }
         type.SelectionChanged += (_, _) => ShowTarget();
         ShowTarget();
-        var dateNote=Ui.Text("Planned Date is when this wishlist began. Target Date is the purchase goal. For historical records, choose the original dates. Each funding activity has its own date.",12,Ui.Muted);dateNote.Margin=new Thickness(0,12,0,0);AddFields(dateNote);
+        var dateNote=Theme.Label("Planned Date is when this wishlist began. Target Date is the purchase goal. For historical records, choose the original dates. Each funding activity has its own date.",12,Theme.Muted);dateNote.Margin=new Thickness(0,12,0,0);AddFields(dateNote);
         OnSubmit(()=>{
             var shared = type.SelectedIndex == 1;
             var value=shared ? 0 : FormValidation.Money(target);FormValidation.Require(shared || value>0,target,"Target amount must be greater than zero, with at most two decimals.");
@@ -66,26 +66,26 @@ internal sealed class WishlistActivityDateDialog : FormWindow
     public WishlistActivityDateDialog(Window owner,DocumentSession session,WishlistEvent activity) : base(owner,activity.Kind switch{WishlistEventKind.Allocated=>"Edit Allocation Date",WishlistEventKind.Purchased=>"Edit Purchase Date",WishlistEventKind.Transferred=>"Edit Transfer Date",WishlistEventKind.Reassigned=>"Edit Reassignment Date",WishlistEventKind.Released=>"Edit Release Date",WishlistEventKind.PurchaseCorrected=>"Edit Correction Date",WishlistEventKind.Cancelled=>"Edit Cancellation Date",WishlistEventKind.Closed=>"Edit Close Date",_=>"Edit Wishlist Date"},"Correct the recorded date. Changes are saved to your file with Save (Ctrl+S).","Save Changes",560)
     {
         var date=DateInput(activity.Date);
-        Field("Wishlist",Ui.Text(session.Document.Wishlists.Single(w=>w.Id==activity.WishlistId).Name,13));
-        Field("Activity",Ui.Text(WishlistPresentation.ActivityName(activity.Kind),13));
-        if(activity.FromBankId is Guid from)Field("From Bank",Ui.Text(session.Document.BankName(from),13));
-        if(activity.ToBankId is Guid to)Field("To Bank",Ui.Text(session.Document.BankName(to),13));
-        if(activity.Amount>0)Field(activity.Kind==WishlistEventKind.Purchased?"Actual Price":"Amount",Ui.Text(Display.Money(activity.Amount),13));
-        if(activity.Fee>0||activity.Kind is WishlistEventKind.Purchased or WishlistEventKind.Transferred)Field("Admin Fee",Ui.Text(Display.Money(activity.Fee),13));
+        Field("Wishlist",Theme.Label(session.Document.Wishlists.Single(w=>w.Id==activity.WishlistId).Name,13));
+        Field("Activity",Theme.Label(WishlistPresentation.ActivityName(activity.Kind),13));
+        if(activity.FromBankId is Guid from)Field("From Bank",Theme.Label(session.Document.BankName(from),13));
+        if(activity.ToBankId is Guid to)Field("To Bank",Theme.Label(session.Document.BankName(to),13));
+        if(activity.Amount>0)Field(activity.Kind==WishlistEventKind.Purchased?"Actual Price":"Amount",Theme.Label(Display.Money(activity.Amount),13));
+        if(activity.Fee>0||activity.Kind is WishlistEventKind.Purchased or WishlistEventKind.Transferred)Field("Admin Fee",Theme.Label(Display.Money(activity.Fee),13));
         DateField(activity.Kind switch{WishlistEventKind.Created=>"Planned Date *",WishlistEventKind.Edited=>"Update Date *",WishlistEventKind.Purchased=>"Purchase Date *",_=>"Date *"},date);
         var limits=WishlistPresentation.DateLimits(session.Document,activity,DateOnly.FromDateTime(DateTime.Today));
-        Field("Date range",Ui.Text(limits.Earliest>limits.Latest?"No dates available. Check the surrounding activity dates.":limits.Earliest==DateOnly.MinValue?"On or before "+Display.Date(limits.Latest):Display.Date(limits.Earliest)+" – "+Display.Date(limits.Latest),13));
-        var bounds=Ui.Text("Based on activity order and account opening dates. Historical balances are checked when saving.",12,Ui.Muted);bounds.Margin=new Thickness(0,4,0,8);AddFields(bounds);
+        Field("Date range",Theme.Label(limits.Earliest>limits.Latest?"No dates available. Check the surrounding activity dates.":limits.Earliest==DateOnly.MinValue?"On or before "+Display.Date(limits.Latest):Display.Date(limits.Earliest)+" – "+Display.Date(limits.Latest),13));
+        var bounds=Theme.Label("Based on activity order and account opening dates. Historical balances are checked when saving.",12,Theme.Muted);bounds.Margin=new Thickness(0,4,0,8);AddFields(bounds);
         var reversed=activity.Kind==WishlistEventKind.Purchased&&session.Document.WishlistEvents.Any(e=>e.Kind==WishlistEventKind.PurchaseCorrected&&e.TransactionId==activity.TransactionId);
-        var note=Ui.Text(activity.Kind switch{
+        var note=Theme.Label(activity.Kind switch{
             WishlistEventKind.Created or WishlistEventKind.Edited=>"Created uses Planned Date. Updated uses Update Date. This correction does not change funding or bank transaction dates.",
             WishlistEventKind.Transferred=>"The linked bank transfer, both account movements and Admin Fee move to this date together. Amounts, accounts and wishlist status stay unchanged.",
             WishlistEventKind.Purchased when !reversed=>"The linked Expense and Admin Fee move to this date together. Amounts, category, payment account and wishlist status stay unchanged.",
             WishlistEventKind.Purchased=>"This purchase was reversed. Only its historical activity date changes; the deleted Expense and fee will not be recreated.",
             WishlistEventKind.PurchaseCorrected=>"Changes when the purchase allocation was restored. The reversed Expense and fee stay removed. The wishlist's current status stays unchanged.",
             _=>"Only this activity date changes. No bank transaction is created, and current amounts, allocations and wishlist status stay unchanged."
-        },12,Ui.Muted);note.Margin=new Thickness(0,12,0,0);AddFields(note);
-        if(activity.Kind is not WishlistEventKind.Created and not WishlistEventKind.Edited){var order=Ui.Text("Dates must fit the surrounding funds activities and historical balances. To move several activities earlier, edit the oldest first; to move them later, edit the newest first.",12,Ui.Muted);order.Margin=new Thickness(0,8,0,0);AddFields(order);}
+        },12,Theme.Muted);note.Margin=new Thickness(0,12,0,0);AddFields(note);
+        if(activity.Kind is not WishlistEventKind.Created and not WishlistEventKind.Edited){var order=Theme.Label("Dates must fit the surrounding funds activities and historical balances. To move several activities earlier, edit the oldest first; to move them later, edit the newest first.",12,Theme.Muted);order.Margin=new Thickness(0,8,0,0);AddFields(order);}
         OnSubmit(()=>FormValidation.At(date,()=>session.Apply(WishlistService.EditActivityDate(session.Document,activity.Id,ReadDate(date)))));
     }
 }
@@ -95,8 +95,8 @@ internal sealed class WishlistTargetDateDialog : FormWindow
     public WishlistTargetDateDialog(Window owner,DocumentSession session,WishlistItem item) : base(owner,"Edit Target Date","Change the purchase goal date in any wishlist status. Leave blank to remove the target date.","Save Changes",560)
     {
         var date=DateInput(item.TargetDate??DateOnly.FromDateTime(DateTime.Today));if(item.TargetDate is null)date.Text="";
-        Field("Wishlist",Ui.Text(item.Name,13));DateField("Target Date",date);
-        AddFields(Ui.Text("This changes only the target date. Funding, purchase history and wishlist status stay unchanged. Save your file with Ctrl+S.",12,Ui.Muted));
+        Field("Wishlist",Theme.Label(item.Name,13));DateField("Target Date",date);
+        AddFields(Theme.Label("This changes only the target date. Funding, purchase history and wishlist status stay unchanged. Save your file with Ctrl+S.",12,Theme.Muted));
         OnSubmit(()=>FormValidation.At(date,()=>session.Apply(WishlistService.EditTargetDate(session.Document,item.Id,FormValidation.OptionalDate(date)))));
     }
 }
@@ -115,7 +115,7 @@ internal sealed class WishlistFundsDialog : FormWindow
         var categories=new ComboBox{DisplayMemberPath="Name"};
         void Categories(Guid? selected=null){var items=session.Document.Categories.Where(c=>c.Kind==CategoryKind.Expense).OrderBy(c=>c.Name).ToList();categories.ItemsSource=items;categories.SelectedItem=items.FirstOrDefault(c=>c.Id==selected);}
         Categories();
-        var summary=Ui.Text("",13,Ui.Muted);summary.Margin=new Thickness(0,16,0,0);
+        var summary=Theme.Label("",13,Theme.Muted);summary.Margin=new Thickness(0,16,0,0);
         DateField("Date *",date);
         if(action=="move")Field("Method *",method);
         Field(action=="move"?"From Bank *":action=="purchase"?"Pay from *":"Bank *",bank);
@@ -144,8 +144,8 @@ internal sealed class WishlistFundsDialog : FormWindow
         Guid? FundingGoal() => action == "purchase" ? (goal.SelectedItem as WishlistGoal)?.Id : (source.SelectedItem as FundingChoice)?.Id;
         if(action=="purchase"){
             if (wish.Goals is not null) Field("Goal *", goal);
-            var row=new DockPanel();var add=Ui.Button("New",()=>{var dialog=new CategoryDialog(this,session.Document,forced:CategoryKind.Expense);if(dialog.ShowDialog()==true){var copy=session.Document.Copy();copy.Categories.Add(dialog.Result!);session.Apply(copy);Categories(dialog.Result!.Id);}});
-            add.Margin=new Thickness(4,0,0,0);add.Foreground=Ui.Accent;add.BorderThickness=new Thickness(0);DockPanel.SetDock(add,Dock.Right);row.Children.Add(add);row.Children.Add(categories);Field("Category *",row);
+            var row=new DockPanel();var add=Theme.ActionButton("New",()=>{var dialog=new CategoryDialog(this,session.Document,forced:CategoryKind.Expense);if(dialog.ShowDialog()==true){var copy=session.Document.Copy();copy.Categories.Add(dialog.Result!);session.Apply(copy);Categories(dialog.Result!.Id);}});
+            add.Margin=new Thickness(4,0,0,0);add.Foreground=Theme.Accent;add.BorderThickness=new Thickness(0);DockPanel.SetDock(add,Dock.Right);row.Children.Add(add);row.Children.Add(categories);Field("Category *",row);
         }
         Field(action=="purchase"?"Actual Price (Rp) *":"Amount (Rp) *",amount);
         if(action is "move" or "purchase")Field("Admin Fee (Rp)",fee);

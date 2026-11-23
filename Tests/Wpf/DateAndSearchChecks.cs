@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
 using MyPiggyBank;
@@ -65,6 +66,19 @@ internal static class DateAndSearchChecks
             input.Text="09/25/2021";button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Require(calendar.DisplayMode==CalendarMode.Month&&calendar.DisplayDate.Year==2021&&calendar.DisplayDate.Month==9,"Reopening retained stale navigation.");
             Require(input.Text=="09/25/2021","Reopening changed the input.");
+        }));
+        Check("calendar navigation and selection work through the themed template", () => Picker((calendar, input, _) => {
+            var item = (CalendarItem)calendar.Template.FindName("PART_CalendarItem", calendar);
+            var next = (Button)item.Template.FindName("PART_NextButton", item);
+            next.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Require(calendar.DisplayDate.Month == 3, "The Next button did not change months.");
+            var header = (Button)item.Template.FindName("PART_HeaderButton", item);
+            header.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var year = (Grid)item.Template.FindName("PART_YearView", item);
+            Require(calendar.DisplayMode == CalendarMode.Year && year.IsVisible && year.Children.Count == 12, "The month picker did not open.");
+            calendar.DisplayMode = CalendarMode.Month;
+            calendar.SelectedDate = new DateTime(2020, 3, 4);
+            Require(input.Text == "03/04/2020", "Selecting a date did not update the form.");
         }));
         Check("invalid or blank date input opens today without stale selection or text replacement",()=>Picker((calendar,input,button)=>{
             foreach(var text in new[]{"invalid",""}){

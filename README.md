@@ -1,12 +1,18 @@
 # Piggy
 
-**Versi: [0.2.1.1 — Shared Budget Goals Table](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.2.1.1).**
+**Versi: [0.2.1.2 — Workspace & Purchase Date Fix](https://github.com/Rhahee/piggy-piggy/releases/tag/app-v0.2.1.2).**
 
 **Jenis perubahan: Minor Fix.** Baseline awal tetap tersedia melalui [catatan rilis 0.1.0.0](docs/releases/0.1.0.0.md).
 
-A portable, offline Windows application for personal finances across multiple bank accounts. English interface, magenta Office-style ribbon, Rupiah amounts (**Rp 1,250,000.00**), and dates in **MM/DD/YYYY**.
+A portable, offline Windows application for personal finances across multiple bank accounts. English interface, light and dark workspace themes, Rupiah amounts (**Rp 1,250,000.00**), and dates in **MM/DD/YYYY**.
 
 [Repository](https://github.com/Rhahee/piggy-piggy) · [Releases](https://github.com/Rhahee/piggy-piggy/releases) · [Dokumentasi](docs/README.md) · [Verification](docs/VERIFICATION.md) · [Release guide](docs/RELEASING.md)
+
+## Update 0.2.1.2 — Workspace & Purchase Date Fix
+
+Workspace memakai tema terang/gelap, font Source Sans 3, navigasi samping, dan tombol Save di footer. Overview menampilkan saldo rekening dan lima transaksi terbaru pada periode terpilih. Koreksi tanggal pembelian Shared Budget kini memindahkan pengembalian surplus otomatis beserta Expense dan Admin Fee secara bersamaan.
+
+[Unduh portable 0.2.1.2](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.2.1.2/Piggy-Piggy-0.2.1.2-win-x64.zip) · [Unduh web installer](https://github.com/Rhahee/piggy-piggy/releases/download/app-v0.2.1.2/Piggy-Piggy-Web-Setup-win-x64.exe) · [Catatan rilis](docs/releases/0.2.1.2.md)
 
 ## Update 0.2.1.1 — Shared Budget Goals Table
 
@@ -82,7 +88,7 @@ Nama yang tampil adalah **Piggy**. Nama berkas **Piggy - Piggy.exe** dan paket u
 
 Jika sudah memiliki dokumen keuangan dari build sebelumnya, simpan perubahan dengan **Save**, tutup aplikasi tersebut, ekstrak paket versi baru ke folder pilihanmu, lalu **Open** dokumen **.mpb** yang sama.
 
-Format dokumen saat ini **9**, dan format 1–8 tetap bisa dibuka tanpa menulis ulang berkas asal sampai Save. Pembaruan setelah baseline 0.1.0.0 tersedia melalui tombol update aplikasi.
+Format dokumen saat ini **12**, dan format 1–11 tetap bisa dibuka tanpa menulis ulang berkas asal sampai Save. Dokumen yang disimpan dalam format 12 memerlukan versi aplikasi yang mendukung format tersebut. Pembaruan setelah baseline 0.1.0.0 tersedia melalui tombol update aplikasi.
 
 Repository ini dimulai dari baseline C#/WPF **0.1.0.0**. Riwayat Git lama, eksperimen, hasil build, dan dokumen keuangan pribadi tidak disertakan.
 

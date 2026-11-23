@@ -41,6 +41,34 @@ internal static class Program
     public static int Main()
     {
         var app=new App();app.InitializeComponent();var owner=new Window();new System.Windows.Interop.WindowInteropHelper(owner).EnsureHandle();
+        Check("managers and nested forms follow the workspace theme", () => {
+            var main = new MainWindow();
+            new System.Windows.Interop.WindowInteropHelper(main).EnsureHandle();
+            var dark = typeof(MainWindow).GetField("darkWorkspace", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            try
+            {
+                var session = Session();
+                foreach (var (enabled, background, surface, accent) in new[]
+                {
+                    (false, "#FFF7F5F0", "#FFFDFCF9", "#FF535B9F"),
+                    (true, "#FF191A23", "#FF252632", "#FFADB5F1")
+                })
+                {
+                    dark.SetValue(main, enabled);
+                    var manager = new ManagerWindow(main, session, true, () => { });
+                    new System.Windows.Interop.WindowInteropHelper(manager).EnsureHandle();
+                    var form = new BankDialog(manager, session.Document);
+                    Equal(background, manager.Background.ToString());
+                    Equal(surface, Desc<DataGrid>(manager).Single().Background.ToString());
+                    Equal(background, form.Background.ToString());
+                    Equal(surface, Desc<TextBox>(form).First().Background.ToString());
+                    Equal(accent, Desc<Button>(form).Single(button => button.IsDefault).Background.ToString());
+                    form.Close();
+                    manager.Close();
+                }
+            }
+            finally { main.Close(); }
+        });
         Check("shared budget can be created, given a goal and used for a purchase through the forms", () => {
             var session = new DocumentSession();
             var expense = new Category(Guid.NewGuid(), "Shopping", CategoryKind.Expense);
@@ -161,13 +189,12 @@ internal static class Program
         {
             var window=new MainWindow();
             var make=typeof(MainWindow).GetMethod("MakeLedger",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance)!;
-            var grid=(DataGrid)make.Invoke(window,[true])!;grid.Style=(Style)app.FindResource(typeof(DataGrid));grid.ItemsSource=LedgerRow.From(Session().Document,Borrow()).ToList();
+            var grid=(DataGrid)make.Invoke(window,null)!;grid.Style=(Style)app.FindResource(typeof(DataGrid));grid.ItemsSource=LedgerRow.From(Session().Document,Borrow()).ToList();
             foreach(var pair in new[]{(1,56.0),(5,48.0),(6,48.0)}){Equal(pair.Item2,grid.Columns[pair.Item1].Width.Value);Equal(false,grid.Columns[pair.Item1].CanUserResize);}
             Equal(true,grid.Columns[4].Width.IsStar&&grid.Columns[4].Width.Value>grid.Columns[2].Width.Value);
             Equal("Type",grid.Columns[1].SortMemberPath);
             Equal("Allocation",grid.Columns[5].SortMemberPath);Equal("Debt",grid.Columns[6].SortMemberPath);
             Equal("Allocations",AutomationProperties.GetName((Image)grid.Columns[5].Header));
-            var recent=(DataGrid)make.Invoke(window,[false])!;Equal(5,recent.Columns.Count);Equal(56.0,recent.Columns[1].Width.Value);
             window.Close();
         });
         Check("long ledger text uses ellipsis and keeps the complete tooltip",()=>

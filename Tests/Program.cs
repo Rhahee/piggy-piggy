@@ -502,6 +502,7 @@ Test("historical debt totals use original transaction dates",()=>{var d=PartialD
 Test("metadata actions reject a missing debt",()=>{var d=BorrowedDebt();var id=Guid.NewGuid();Reject(()=>DebtService.SetPaid(d,id,true));Reject(()=>DebtService.EditDetails(d,id,"A","B",null));Reject(()=>DebtService.RemoveTracking(d,id));});
 SelfDebtChecks.Run(Test);
 BorrowTransferChecks.Run(Test);
+SharedPurchaseDateChecks.Run(Test);
 UpdateChannelChecks.Run(Test);
 InstallerChecks.Run(Test);
 Test("borrowing transfer respects Wishlist protected source funds",()=>{var d=WishlistFunded();var self=new Debt(Guid.NewGuid(),"Pocket money","",null,Kind:DebtKind.Self,SelfBankId:bankA.Id);d.Purposes=[debt];Reject(()=>DebtService.SaveTransaction(d,Transfer() with{Date=wishlistDate,Amount=4_500_000,Allocations=new[]{new TransferAllocation(debt.Id,4_500_000,self.Id,SelfDebtAction.Borrow)}},self));});

@@ -242,3 +242,11 @@ After publication and channel promotion in **29d7906**, the updater found **0.2.
 Production staging verified the GitHub portable ZIP and EXE version. The packaged application opened and closed a fictional format-12 document without rewriting it. A separate Save/Open check preserved its contents. The ZIP SHA-256 is `2d39075a4c9488793d088f0c72c2737efad2be0e6b6804f73beb4c49c5ff531f`. The web installer matches the previous release asset at SHA-256 `b8729d291b2004a92bb965195620b5108824984da94f44ea0572c31ef517f524`. Both public checksum downloads matched the verified copies.
 
 After publication and channel promotion in **7aca7ab**, the production updater found **0.2.1.1** from **0.1.1.3** and **0.2.1.0**, and reported **UpToDate** for **0.2.1.1**. The web installer resolver selected **0.2.1.1**. Full installation and update restart were outside this verification.
+
+## Local Shared Budget purchase-date fix — 0.2.1.2 (2026-11-23)
+
+The user approved combining this fix with the existing local 0.2.1.2 UI work. Editing a Shared Budget purchase date now moves its automatic surplus returns and linked expense/admin fee together. The date dialog excludes these automatic returns from its neighboring-activity limits. Manual reallocations and historical balance validation still constrain the correction; direct edits of internal funding events remain prohibited.
+
+The new regression failed on the original implementation. After the fix, **458 core checks and 55 isolated WPF checks** passed on the current local checkout. Five new core checks cover two-account surplus, earlier/later corrections, source immutability, manual reallocation limits, fee funding, purchases without surplus, format-12 Save/Open, repeated corrections and purchase reversal. Fictional data and temporary directories were used.
+
+Document format remains **12**. Existing documents have no operation ID, so automatic returns are identified by the adjacent matching goal-to-unassigned pairs produced by Purchase. No application version metadata was changed by this fix. No commit, push, tag or release was performed. Native mouse interaction, full update installation/restart and physical mixed-DPI monitor migration were not repeated.

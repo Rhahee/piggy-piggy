@@ -14,7 +14,8 @@ internal sealed class DebtTrackingEditor : StackPanel
     private readonly ComboBox mode=new(),choice=new(){DisplayMemberPath="Name"};
     private readonly TextBox name=new(){MaxLength=100},lender=new(){MaxLength=100},due=FormWindow.DateInput(DateOnly.FromDateTime(DateTime.Today));
     private readonly TextBox repayment=FormWindow.MoneyInput();
-    private readonly TextBlock preview=Ui.Text("",12,Ui.Muted),hint=Ui.Text("",12,Ui.Muted);
+    private readonly WorkspaceTheme theme;
+    private readonly TextBlock preview, hint;
     private readonly FrameworkElement lenderRow,repaymentRow;
     private readonly DocumentSession session;
     private readonly TransactionKind kind;
@@ -26,14 +27,17 @@ internal sealed class DebtTrackingEditor : StackPanel
     private bool changing;
     private bool Self => mode.SelectedIndex==0;
     private bool IsRepayment => Self&&kind==TransactionKind.Income;
-    public DebtTrackingEditor(DocumentSession session,TransactionKind kind,Transaction? existing,Func<DateOnly> readDate,Func<Guid?> readBank,Func<decimal> readAmount,Func<decimal> readFee,Func<bool> afterFee,Action changed,Guid? preset,bool trackNew)
+    public DebtTrackingEditor(WorkspaceTheme theme, DocumentSession session,TransactionKind kind,Transaction? existing,Func<DateOnly> readDate,Func<Guid?> readBank,Func<decimal> readAmount,Func<decimal> readFee,Func<bool> afterFee,Action changed,Guid? preset,bool trackNew)
     {
+        this.theme = theme;
+        preview = theme.Label("", 12, theme.Muted); hint = theme.Label("", 12, theme.Muted);
+        track.Foreground = theme.Text;
         this.session=session;this.kind=kind;this.existing=existing;this.readDate=readDate;this.readBank=readBank;this.readAmount=readAmount;this.readFee=readFee;this.afterFee=afterFee;
         due.Text="";Children.Add(track);Children.Add(details);
         mode.ItemsSource=kind==TransactionKind.Income?new[]{"Repay Self Debt","Borrow from lender"}:new[]{"Self Debt — restore this account","Pay lender"};
         var selected=preset??existing?.DebtId??existing?.SelfDebtPayment?.DebtId;
         mode.SelectedIndex=selected is Guid id?session.Document.Debts.First(d=>d.Id==id).Kind==DebtKind.Self?0:1:kind==TransactionKind.Expense?0:1;
-        Row(details,"Action *",mode);Row(details,"Debt *",choice);Row(newFields,"Debt Name *",name);lenderRow=Row(newFields,"Lender *",lender);Row(newFields,"Due Date",FormWindow.DatePickerInput(due));details.Children.Add(newFields);
+        Row(details,"Action *",mode);Row(details,"Debt *",choice);Row(newFields,"Debt Name *",name);lenderRow=Row(newFields,"Lender *",lender);Row(newFields,"Due Date",FormWindow.DatePickerInput(due, theme));details.Children.Add(newFields);
         repayment.Text=existing?.SelfDebtPayment is {} p?p.Amount.ToString("N2",Display.Culture):"";repaymentRow=Row(details,"Repayment\nAmount (Rp) *",repayment);
         preview.Margin=new Thickness(0,8,0,0);details.Children.Add(preview);hint.Margin=new Thickness(0,8,0,0);details.Children.Add(hint);
         void Changed(){Refresh();changed();}
@@ -50,10 +54,10 @@ internal sealed class DebtTrackingEditor : StackPanel
             choice.SelectedItem=selected is Guid id?options.FirstOrDefault(c=>c.Id==id):creates?options.First():null;
         }finally{changing=false;}
     }
-    private static FrameworkElement Row(Panel parent,string label,UIElement input)
+    private FrameworkElement Row(Panel parent,string label,UIElement input)
     {
         var row=new Grid{Margin=new Thickness(0,4,0,4)};row.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(112)});row.ColumnDefinitions.Add(new ColumnDefinition());
-        var text=Ui.Text(label,13);text.Margin=new Thickness(0,0,8,0);row.Children.Add(text);Grid.SetColumn(input,1);row.Children.Add(input);parent.Children.Add(row);return row;
+        var text=theme.Label(label,13);text.Margin=new Thickness(0,0,8,0);row.Children.Add(text);Grid.SetColumn(input,1);row.Children.Add(input);parent.Children.Add(row);return row;
     }
     public void Refresh()
     {
@@ -95,7 +99,7 @@ internal sealed class DebtDetailsDialog : FormWindow
     public DebtDetailsDialog(Window owner,DocumentSession session,Debt debt):base(owner,"Edit Debt","Fields marked * are required. Details can be edited in every status.","Save Changes",560)
     {
         var name=new TextBox{Text=debt.Name,MaxLength=100};var lender=new TextBox{Text=debt.Lender,MaxLength=100};var due=DateInput(debt.DueDate??DateOnly.FromDateTime(DateTime.Today));if(debt.DueDate is null)due.Text="";
-        Field("Debt Name *",name);if(debt.Kind==DebtKind.External)Field("Lender *",lender);else Field("Return to",Ui.Text(session.Document.BankName(debt.SelfBankId!.Value)));DateField("Due Date",due);
+        Field("Debt Name *",name);if(debt.Kind==DebtKind.External)Field("Lender *",lender);else Field("Return to",Theme.Label(session.Document.BankName(debt.SelfBankId!.Value)));DateField("Due Date",due);
         OnSubmit(()=>FormValidation.At(name,()=>session.Apply(DebtService.EditDetails(session.Document,debt.Id,name.Text.Trim(),lender.Text.Trim(),FormValidation.OptionalDate(due)))));
     }
 }

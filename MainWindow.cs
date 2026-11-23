@@ -4,8 +4,10 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using Microsoft.Win32;
 using MyPiggyBank.Core;
 
@@ -15,11 +17,16 @@ public sealed partial class MainWindow : Window
 {
     private readonly DocumentSession session = new();
     private readonly DockPanel root = new();
+    private readonly Border captionDivider = new() { Height = 1 };
     private readonly ContentControl body = new();
     private bool fittingWindow;
     private readonly UpdateSession updates = new();
     private TextBlock status = Ui.Text("", 12, Ui.Muted);
-    private bool hasDocument, backstage, updating, preparingUpdate;
+    private bool hasDocument, updating, preparingUpdate;
+    private bool darkWorkspace;
+    internal WorkspaceTheme Theme => darkWorkspace ? WorkspaceTheme.Dark : WorkspaceTheme.Light;
+    private CheckBox? workspaceThemeSwitch;
+    private Button? footerSave;
     private string page = "Overview", ribbonTab = "Home", search = "", typeFilter = "All types",debtTrackingFilter="All transactions";
     private Guid? selectedBank, categoryFilter, purposeFilter;
     private DateOnly month = new(DateTime.Today.Year, DateTime.Today.Month, 1);
@@ -39,7 +46,10 @@ public sealed partial class MainWindow : Window
         WindowStyle = WindowStyle.SingleBorderWindow; ResizeMode = ResizeMode.CanResize;
         // Navigation stays outside every scrolling page. A bounded table can
         // virtualize rows and handle the wheel instead of growing the window.
-        Content = root; root.Children.Add(body);
+        Content = root;
+        DockPanel.SetDock(captionDivider, Dock.Top);
+        root.Children.Add(captionDivider);
+        root.Children.Add(body);
         body.PreviewMouseWheel += Ui.ScrollWithWheel;
         void ScheduleFit()
         {
@@ -62,8 +72,10 @@ public sealed partial class MainWindow : Window
         };
         CommandBinding Bind(RoutedCommand command, Action action, Func<bool>? enabled = null) { var binding = new CommandBinding(command, (_, _) => action(), (_, e) => e.CanExecute = enabled?.Invoke() ?? true); CommandBindings.Add(binding); return binding; }
         Bind(ApplicationCommands.New, NewDocument); Bind(ApplicationCommands.Open, OpenDocument); Bind(ApplicationCommands.Save, () => Save(), () => hasDocument); Bind(ApplicationCommands.SaveAs, () => Save(true), () => hasDocument);
+        Bind(ApplicationCommands.Close, CloseDocument, () => hasDocument);
         InputBindings.Add(new KeyBinding(ApplicationCommands.SaveAs, Key.S, ModifierKeys.Control | ModifierKeys.Shift));
-        Bind(ApplicationCommands.Find, () => { page = "Transactions"; backstage = false; Render(); FocusSearch(); }, () => hasDocument);
+        InputBindings.Add(new KeyBinding(ApplicationCommands.Close, Key.W, ModifierKeys.Control));
+        Bind(ApplicationCommands.Find, () => { page = "Transactions"; Render(); FocusSearch(); }, () => hasDocument);
         Closing += OnClosing;
         Closed += (_,_) => updates.Dispose();
         Render();
@@ -71,142 +83,355 @@ public sealed partial class MainWindow : Window
     private void UpdateTitle()
     {
         Title = hasDocument ? $"{NameOfDocument}{(session.Dirty ? "*" : "")} — Piggy" : "Piggy";
-        status.Text = hasDocument ? $"{session.Document.Transactions.Count} transactions   |   {(session.Dirty ? "Unsaved changes" : session.FilePath is null ? "Not saved yet" : "Saved")} {(session.FilePath is not null ? "  |   " + session.FilePath : "")}" : "";
-        status.ToolTip = hasDocument && session.FilePath is string path
-            ? new TextBlock { Text = path, TextWrapping = TextWrapping.Wrap, MaxWidth = 600 } : null;
-        ToolTipService.SetShowDuration(status,60000);
+        var count = session.Document.Transactions.Count;
+        status.Text = hasDocument ? $"{count} {(count == 1 ? "transaction" : "transactions")}" : "";
+        var saveStatus = session.Dirty ? "Unsaved changes" : session.FilePath is null ? "Not saved yet" : "Saved";
+        status.ToolTip = hasDocument ? saveStatus : null;
+        UpdateFooterSave();
     }
     private void Render()
     {
         CaptureWishlistViewport();
         CaptureDebtViewport();
-        status = Ui.Text("", 12, Ui.Muted);
+        var theme = Theme;
+        captionDivider.Background = theme.Rule;
+        status = theme.Label("", 12, theme.Muted);
+        workspaceThemeSwitch = null;
+        footerSave = null;
         UpdateTitle(); ledger = null; editButton = null; deleteButton = null; searchBox = null;
-        if (!hasDocument) { body.Content = StartPage(); return; }
-        if (backstage) { body.Content = FilePage(); return; }
+        if (!hasDocument) { body.Content = StartPage(theme); return; }
         if(page=="Wishlist"){
             var visible=session.Document.Wishlists.Where(w=>selectedBank is null||session.Document.WishlistAllocated(w.Id,selectedBank)>0).ToList();
             if(!visible.Any(w=>w.Id==selectedWishlist))selectedWishlist=visible.FirstOrDefault()?.Id;
         }
         if(page=="Debt"&&!VisibleDebts().Any(d=>d.Id==selectedDebt))selectedDebt=VisibleDebts().FirstOrDefault()?.Id;
-        var layout = new DockPanel { Background = Ui.Brush("#F3F3F6") };
-        var ribbon = BuildRibbon(); DockPanel.SetDock(ribbon, Dock.Top); layout.Children.Add(ribbon);
-        status.TextWrapping = TextWrapping.NoWrap; status.TextTrimming = TextTrimming.CharacterEllipsis;
-        var footerContent = new DockPanel(); var indicator = new UpdateIndicator(this,updates); DockPanel.SetDock(indicator,Dock.Right); footerContent.Children.Add(indicator); footerContent.Children.Add(status);
-        var footer = new Border { Height = 40, BorderBrush = Ui.Line, BorderThickness = new Thickness(0,1,0,0), Background = Ui.Brush("#F8F8FA"), Padding = new Thickness(12,0,12,0), Child = footerContent }; DockPanel.SetDock(footer, Dock.Bottom); layout.Children.Add(footer);
-        var tabs = Ui.Stack(Orientation.Horizontal); tabs.Background = Ui.Brush("#F5F5F8");
-        foreach (var label in new[] { "Overview", "Transactions", "Wishlist", "Debt" }) { var name = label; var b = Ui.Button(label, () => { page = name; Render(); }); b.Margin = new Thickness(0); b.Padding = new Thickness(20,8,20,8); b.FontSize = 12; Ui.SelectNavigation(b,page == name); tabs.Children.Add(b); }
-        DockPanel.SetDock(tabs, Dock.Bottom); layout.Children.Add(tabs);
-        var side = new ScrollViewer { Content = BuildSidebar(), Width = 200, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        var layout = new DockPanel();
+        theme.ApplyTo(layout);
+        var ribbon = BuildRibbon(theme); DockPanel.SetDock(ribbon, Dock.Top); layout.Children.Add(ribbon);
+        var footer = BuildFooter(theme); DockPanel.SetDock(footer, Dock.Bottom); layout.Children.Add(footer);
+        var side = new ScrollViewer { Content = BuildSidebar(theme), Width = 160, VerticalContentAlignment = VerticalAlignment.Stretch, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         DockPanel.SetDock(side, Dock.Left); layout.Children.Add(side);
-        var workspace = page == "Overview" ? Overview() : page == "Wishlist" ? WishlistPage() : page=="Debt"?DebtPage():TransactionsPage();
+        var workspace = page == "Overview" ? Overview(theme) : page == "Wishlist" ? WishlistPage() : page=="Debt"?DebtPage():TransactionsPage();
         layout.Children.Add(page is "Wishlist" or "Debt" ? Ui.WorkspaceViewport(workspace) : workspace); body.Content = layout;
         if (editButton is not null) editButton.IsEnabled = false; if (deleteButton is not null) deleteButton.IsEnabled = false;
     }
-    private UIElement StartPage()
+    private Border BuildFooter(WorkspaceTheme theme)
     {
-        var grid = new Grid { Background = Brushes.White };
-        var actions = Ui.Stack(); actions.HorizontalAlignment = HorizontalAlignment.Center; actions.VerticalAlignment = VerticalAlignment.Center; actions.Margin = new Thickness(24);
-        var logo = new Image { Source = Ui.BrandImage("Brand/piggy-logo.png"), Width = 320, Height = 320, Stretch = Stretch.Uniform };
-        RenderOptions.SetBitmapScalingMode(logo, BitmapScalingMode.HighQuality); AutomationProperties.SetName(logo,"Piggy logo"); actions.Children.Add(logo);
-        foreach (var (label, action) in new (string,Action)[] { ("New",NewDocument), ("Open",OpenDocument) })
+        var controls = Ui.Stack(Orientation.Horizontal);
+        controls.HorizontalAlignment = HorizontalAlignment.Right;
+        controls.VerticalAlignment = VerticalAlignment.Center;
+        Border Separator(double gap) => new()
         {
-            var button = Ui.Button(label,action,label == "New"); button.Width = 240; button.Height = 44; button.FontSize = 16;
-            button.Margin = new Thickness(0,0,0,label == "New" ? 12 : 0); actions.Children.Add(button);
+            Width = 1, Height = 16, Background = theme.Outline,
+            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(gap, 0, gap, 0)
+        };
+        if (hasDocument) controls.Children.Add(Separator(12));
+        var version = UpdateIndicator.VersionLabel(theme.Muted);
+        controls.Children.Add(version);
+        controls.Children.Add(Separator(6));
+        var themeSwitch = new CheckBox
+        {
+            Style = (Style)FindResource("WorkspaceThemeSwitch"), IsChecked = darkWorkspace,
+            Width = 40, Height = 28, VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 6, 0),
+            Foreground = theme.Accent, Background = theme.Wash, BorderBrush = theme.Outline,
+            ToolTip = "Dark theme"
+        };
+        AutomationProperties.SetName(themeSwitch, "Dark theme");
+        workspaceThemeSwitch = themeSwitch;
+        RoutedEventHandler changeTheme = (_, _) => {
+            darkWorkspace = themeSwitch.IsChecked == true;
+            Render();
+            var toggle = workspaceThemeSwitch;
+            Dispatcher.InvokeAsync(() => toggle?.Focus(), System.Windows.Threading.DispatcherPriority.Input);
+        };
+        themeSwitch.Checked += changeTheme;
+        themeSwitch.Unchecked += changeTheme;
+        controls.Children.Add(themeSwitch);
+        controls.Children.Add(new UpdateIndicator(this, updates, theme, showVersion: false));
+
+        var footer = new Border
+        {
+            Height = 36, Padding = new Thickness(0, 0, 12, 0), Child = controls,
+            Background = theme.Sidebar,
+            BorderBrush = theme.Outline, BorderThickness = new Thickness(0, 1, 0, 0)
+        };
+        if (!hasDocument) return footer;
+
+        var tabs = new UniformGrid { Rows = 1 };
+        foreach (var name in new[] { "Overview", "Transactions", "Wishlist", "Debt" })
+        {
+            var button = Ui.Button(name, () => { page = name; Render(); });
+            button.Padding = new Thickness(20,8,20,8);
+            button.Margin = new Thickness(0);
+            button.FontSize = 12;
+            theme.StyleButton(button, selected: page == name, square: true);
+            button.BorderBrush = theme.Outline;
+            button.BorderThickness = new Thickness(0, 0, 1, 0);
+            tabs.Children.Add(button);
         }
-        grid.Children.Add(actions); AddUpdateCorner(grid); return grid;
-    }
-    private void AddUpdateCorner(Grid grid)
-    {
-        var indicator = new UpdateIndicator(this,updates) { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(24) };
-        Grid.SetColumn(indicator,Math.Max(0,grid.ColumnDefinitions.Count-1)); grid.Children.Add(indicator);
-    }
-    private UIElement BuildRibbon()
-    {
-        var stack = Ui.Stack(); stack.Background = Ui.Brush("#F5F4F7"); var tabs = Ui.Stack(Orientation.Horizontal);
-        foreach (var label in new[] { "File", "Home", "Data", "View" }) { var name = label; var b = Ui.Button(label, () => { if (name == "File") backstage = true; else ribbonTab = name; Render(); }); b.Margin = new Thickness(0); b.Padding = new Thickness(20,0,20,0); b.Height = 32; b.MinHeight = 0; b.FontSize = 12; Ui.SelectNavigation(b,ribbonTab == name); tabs.Children.Add(b); }
-        var tabRow = new DockPanel { Height = 32 };
-        var save = Ui.SquareIconButton("save", () => Save(), "Save (Ctrl+S)", 32, Ui.Accent);
-        save.Margin = new Thickness(0,0,4,0); AutomationProperties.SetName(save,"Save");
-        DockPanel.SetDock(save,Dock.Right); tabRow.Children.Add(save); tabRow.Children.Add(tabs); stack.Children.Add(tabRow);
-        var groups = Ui.Stack(Orientation.Horizontal);
-        void Group(string label, params Button[] buttons)
+
+        var save = Ui.Button("", () => Save());
+        var saveIcon = new Image { Width = 14, Height = 14, Stretch = Stretch.Uniform };
+        save.Content = saveIcon;
+        save.Unloaded += (_, _) =>
         {
-            var s = Ui.Stack(); var row = Ui.Stack(Orientation.Horizontal);
-            foreach (var b in buttons)
+            save.BeginAnimation(Control.BackgroundProperty, null);
+            saveIcon.BeginAnimation(Image.SourceProperty, null);
+        };
+        save.Width = save.Height = save.MinHeight = 28;
+        save.Padding = new Thickness(0);
+        theme.StyleButton(save, outlined: true);
+
+        save.VerticalAlignment = VerticalAlignment.Center;
+        save.Margin = new Thickness(4, 0, 0, 0);
+        AutomationProperties.SetName(save, "Save");
+        footerSave = save;
+        UpdateFooterSave();
+        controls.Children.Add(save);
+        var location = session.FilePath ?? "Not saved yet";
+        var path = Ui.Text(location, 12, theme.Muted);
+        path.HorizontalAlignment = HorizontalAlignment.Right;
+        path.TextWrapping = TextWrapping.NoWrap;
+        path.TextTrimming = TextTrimming.CharacterEllipsis;
+        path.MaxWidth = 520;
+        path.ToolTip = new TextBlock { Text = location, TextWrapping = TextWrapping.Wrap, MaxWidth = 600 };
+        ToolTipService.SetShowDuration(path, 60000);
+        var content = new DockPanel();
+        footer.Child = content;
+        DockPanel.SetDock(tabs, Dock.Left);
+        DockPanel.SetDock(controls, Dock.Right);
+        content.Children.Add(tabs);
+        content.Children.Add(controls);
+        content.Children.Add(path);
+        return footer;
+    }
+    private void UpdateFooterSave()
+    {
+        if (footerSave is not { Content: Image icon } save) return;
+        var dirty = session.Dirty;
+        var theme = Theme;
+        var warning = theme.Error;
+        var background = Brushes.Transparent;
+        save.Background = dirty ? warning : background;
+        icon.Source = Ui.Drawing("save", dirty ? theme.Surface : theme.Accent);
+        AutomationProperties.SetItemStatus(save, dirty ? "Unsaved changes" : "");
+        save.ToolTip = dirty ? "Unsaved changes · Save (Ctrl+S)" : "Save (Ctrl+S)";
+        var animate = dirty && SystemParameters.ClientAreaAnimation;
+        if (animate == icon.HasAnimatedProperties) return;
+        ObjectAnimationUsingKeyFrames? Blink(object inverted, object normal) => animate ? new ObjectAnimationUsingKeyFrames
+        {
+            Duration = TimeSpan.FromSeconds(1.6),
+            RepeatBehavior = RepeatBehavior.Forever,
+            KeyFrames =
             {
-                b.Margin = new Thickness(0); b.MinWidth = 0; b.Width = b.Height = 72; b.Padding = new Thickness(4);
-                b.HorizontalContentAlignment = HorizontalAlignment.Center; b.VerticalContentAlignment = VerticalAlignment.Center;
-                if (b.Content is StackPanel command)
-                {
-                    command.Width = 64; command.HorizontalAlignment = HorizontalAlignment.Center; command.VerticalAlignment = VerticalAlignment.Center;
-                    if (command.Children.OfType<Image>().FirstOrDefault() is Image icon) { icon.Width = icon.Height = 32; icon.HorizontalAlignment = HorizontalAlignment.Center; icon.Margin = new Thickness(0,0,0,4); }
-                    if (command.Children.OfType<TextBlock>().FirstOrDefault() is TextBlock labelText)
-                    {
-                        labelText.FontSize = 8.0 * 96 / 72; labelText.Width = 64; labelText.Height = 16;
-                        labelText.Margin = new Thickness(0); labelText.TextWrapping = TextWrapping.NoWrap; labelText.TextAlignment = TextAlignment.Center;
-                        labelText.TextTrimming = TextTrimming.CharacterEllipsis; b.ToolTip = labelText.Text; AutomationProperties.SetName(b,labelText.Text);
-                    }
-                }
-                row.Children.Add(b);
+                new DiscreteObjectKeyFrame(inverted, KeyTime.FromTimeSpan(TimeSpan.Zero)),
+                new DiscreteObjectKeyFrame(normal, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(.8)))
             }
-            s.Children.Add(row); var text = Ui.Text(label,11,Ui.Muted); text.HorizontalAlignment = HorizontalAlignment.Center;
-            text.Margin = new Thickness(0,4,0,0); s.Children.Add(text);
-            groups.Children.Add(new Border { Child = s, BorderBrush = Ui.Line, BorderThickness = new Thickness(0,0,1,0), Padding = new Thickness(4) });
+        } : null;
+        save.BeginAnimation(Control.BackgroundProperty, Blink(warning, background));
+        icon.BeginAnimation(Image.SourceProperty, Blink(icon.Source, Ui.Drawing("save", warning)));
+    }
+    private UIElement StartPage(WorkspaceTheme theme)
+    {
+        var layout = new DockPanel();
+        theme.ApplyTo(layout);
+        layout.Background = theme.Background;
+        var footer = BuildFooter(theme);
+        DockPanel.SetDock(footer, Dock.Bottom);
+        layout.Children.Add(footer);
+
+        var panel = Ui.Stack();
+        const double logoSize = 320;
+        var logo = new Image
+        {
+            Source = Ui.BrandImage(darkWorkspace ? "Brand/piggy-logo-dark.png" : "Brand/piggy-logo.png"),
+            Width = logoSize, Height = logoSize,
+            Clip = new RectangleGeometry(new Rect(0, 0, logoSize, logoSize), 12, 12)
+        };
+        RenderOptions.SetBitmapScalingMode(logo, BitmapScalingMode.HighQuality);
+        AutomationProperties.SetName(logo, "Piggy");
+        panel.Children.Add(logo);
+
+        var actions = new UniformGrid { Rows = 1, Margin = new Thickness(0, 24, 0, 0) };
+        foreach (var (label, action, primary) in new (string, Action, bool)[]
+                 { ("New", NewDocument, true), ("Open", OpenDocument, false) })
+        {
+            var button = theme.ActionButton(label, action, primary);
+            button.Height = 42;
+            button.FontSize = 16;
+            button.Margin = new Thickness(primary ? 0 : 4, 0, primary ? 4 : 0, 0);
+            button.ToolTip = primary ? "Create a Piggy document (Ctrl+N)" : "Open a Piggy document (Ctrl+O)";
+            actions.Children.Add(button);
+        }
+        panel.Children.Add(actions);
+        var card = theme.Card(panel, new Thickness(28));
+        card.HorizontalAlignment = HorizontalAlignment.Center;
+        card.VerticalAlignment = VerticalAlignment.Center;
+        layout.Children.Add(card);
+        return layout;
+    }
+    private UIElement BuildRibbon(WorkspaceTheme theme)
+    {
+        var stack = Ui.Stack(); stack.Background = theme.Sidebar; var tabs = Ui.Stack(Orientation.Horizontal);
+        var start = Ui.Button("", CloseDocument);
+        start.Content = Ui.Icon("settings", 18, theme.Accent);
+        start.ToolTip = "Back to start screen";
+        AutomationProperties.SetName(start, "Back to start screen");
+        start.Width = 44;
+        start.Height = 32;
+        start.Margin = start.Padding = new Thickness(0);
+        theme.StyleButton(start, square: true);
+        start.BorderBrush = theme.Outline;
+        start.BorderThickness = new Thickness(0, 0, 1, 0);
+        tabs.Children.Add(start);
+        foreach (var name in new[] { "Home", "Data" })
+        {
+            var button = Ui.Button(name, () => { ribbonTab = name; Render(); });
+            button.Margin = new Thickness(0);
+            button.Padding = new Thickness(20,0,20,0);
+            button.Height = 32;
+            button.MinHeight = 0;
+            button.FontSize = 12;
+            theme.StyleButton(button, selected: ribbonTab == name, square: true);
+            button.BorderBrush = theme.Outline;
+            button.BorderThickness = new Thickness(0, 0, 1, 0);
+            tabs.Children.Add(button);
+        }
+        var tabRow = new DockPanel { Height = 32 };
+        DockPanel.SetDock(tabs, Dock.Left);
+        tabRow.Children.Add(tabs);
+        status.Margin = new Thickness(12, 0, 12, 0);
+        status.TextWrapping = TextWrapping.NoWrap;
+        status.TextTrimming = TextTrimming.CharacterEllipsis;
+        status.TextAlignment = TextAlignment.Right;
+        tabRow.Children.Add(status);
+        stack.Children.Add(new Border
+        {
+            Child = tabRow, BorderBrush = theme.Outline,
+            BorderThickness = new Thickness(0, 0, 0, 1)
+        });
+        var groups = Ui.Stack(Orientation.Horizontal);
+        void Group(params Button[] buttons)
+        {
+            var row = Ui.Stack(Orientation.Horizontal);
+            foreach (var button in buttons)
+            {
+                var command = (StackPanel)button.Content;
+                var icon = (Image)command.Children[0];
+                var label = ((TextBlock)command.Children[1]).Text;
+                command.Children.Remove(icon);
+                icon.Width = icon.Height = 26;
+                icon.Margin = new Thickness(0);
+                button.Content = icon;
+                button.Margin = new Thickness(0);
+                button.Width = button.Height = 48;
+                button.Padding = new Thickness(0);
+                button.ToolTip = label;
+                ToolTipService.SetShowOnDisabled(button, true);
+                AutomationProperties.SetName(button, label);
+                theme.StyleButton(button);
+                row.Children.Add(button);
+            }
+            groups.Children.Add(new Border
+            {
+                Child = row, BorderBrush = theme.Outline,
+                BorderThickness = new Thickness(0, 0, 1, 0), Padding = new Thickness(4)
+            });
         }
         if(ribbonTab=="Home"&&page=="Debt")
         {
             var active=ActiveDebt;var remaining=active is null?0:session.Document.DebtAmounts(active.Id).Remaining;
-            Button Command(string icon,string label,string action,bool enabled=true){var b=Ui.IconButton(icon,label,()=>DebtAction(action),Ui.Accent);b.IsEnabled=enabled;return b;}
-            Group("Debt",Command("add","New Debt","new"),Command("edit","Edit Details","edit",active is not null),Command("delete","Remove","remove",active is not null));
-            Group("Transactions",Command("arrow_up",active?.Kind==DebtKind.Self?"Add Debt":"Borrow","borrow",active is {IsPaid:false}),Command("arrow_down","Payment","payment",active is {IsPaid:false}&&remaining>0));
-            Group("Settlement",Command("square","Mark Paid","paid",active is {IsPaid:false}&&remaining==0),Command("arrow_sync","Reopen","reopen",active is {IsPaid:true}));
+            Button Command(string icon,string label,string action,bool enabled=true){var b=Ui.IconButton(icon,label,()=>DebtAction(action),theme.Accent);b.IsEnabled=enabled;return b;}
+            Group(Command("add","New Debt","new"),Command("edit","Edit Details","edit",active is not null),Command("delete","Remove","remove",active is not null));
+            Group(Command("arrow_up",active?.Kind==DebtKind.Self?"Add Debt":"Borrow","borrow",active is {IsPaid:false}),Command("arrow_down","Payment","payment",active is {IsPaid:false}&&remaining>0));
+            Group(Command("square","Mark Paid","paid",active is {IsPaid:false}&&remaining==0),Command("arrow_sync","Reopen","reopen",active is {IsPaid:true}));
         }
         else if (ribbonTab == "Home" && page == "Wishlist")
         {
             var active=ActiveWishlist;var state=active is null?WishlistStatus.Cancelled:session.Document.WishlistState(active.Id);var funds=active is null?0:session.Document.WishlistAllocated(active.Id);
-            Button Command(string icon,string text,string action,bool enabled=true){var b=Ui.IconButton(icon,text,()=>WishlistAction(action),Ui.Accent);b.IsEnabled=enabled;return b;}
-            Group("Wishlist",Command("add","New Wishlist","new"),Command("edit","Edit","edit",state==WishlistStatus.Planned),Command("dismiss","Cancel","cancel",state==WishlistStatus.Planned));
-            Group("Funds",Command("add","Allocate","allocate",state==WishlistStatus.Planned),Command("arrow_swap","Move","move",state==WishlistStatus.Planned&&funds>0),Command("subtract","Release","release",state==WishlistStatus.Planned&&funds>0));
-            Group("Purchase",Command("money","Purchase","purchase",state==WishlistStatus.Planned && (active?.Goals is null || active.ActiveGoals.Any())),Command("arrow_down","Balance","balance",state==WishlistStatus.Purchased&&funds>0),Command("square","Close","close",state==WishlistStatus.Purchased&&funds==0));
+            Button Command(string icon,string text,string action,bool enabled=true){var b=Ui.IconButton(icon,text,()=>WishlistAction(action),theme.Accent);b.IsEnabled=enabled;return b;}
+            Group(Command("add","New Wishlist","new"),Command("edit","Edit","edit",state==WishlistStatus.Planned),Command("dismiss","Cancel","cancel",state==WishlistStatus.Planned));
+            Group(Command("add","Allocate","allocate",state==WishlistStatus.Planned),Command("arrow_swap","Move","move",state==WishlistStatus.Planned&&funds>0),Command("subtract","Release","release",state==WishlistStatus.Planned&&funds>0));
+            Group(Command("money","Purchase","purchase",state==WishlistStatus.Planned && (active?.Goals is null || active.ActiveGoals.Any())),Command("arrow_down","Balance","balance",state==WishlistStatus.Purchased&&funds>0),Command("square","Close","close",state==WishlistStatus.Purchased&&funds==0));
         }
         else if (ribbonTab == "Home")
         {
-            Group("Transactions", Ui.IconButton("add", "Income", () => EditTransaction(TransactionKind.Income), Ui.Green), Ui.IconButton("subtract", "Expense", () => EditTransaction(TransactionKind.Expense), Ui.Red), Ui.IconButton("arrow_swap", "Transfer", () => EditTransaction(TransactionKind.Transfer), Ui.Accent));
-            editButton = Ui.IconButton("edit", "Edit", EditSelected, Ui.Brush("#2167B1")); deleteButton = Ui.IconButton("delete", "Delete", DeleteSelected, Ui.Accent); Group("Edit", editButton, deleteButton);
-            Group("Find", Ui.IconButton("search", "Search", () => { page = "Transactions"; Render(); FocusSearch(); }, Ui.Brush("#2167B1")), Ui.IconButton("filter", "Filter", ShowFilters));
+            Group(Ui.IconButton("add", "Income", () => EditTransaction(TransactionKind.Income), theme.Success), Ui.IconButton("subtract", "Expense", () => EditTransaction(TransactionKind.Expense), theme.Error), Ui.IconButton("arrow_swap", "Transfer", () => EditTransaction(TransactionKind.Transfer), theme.Accent));
+            editButton = Ui.IconButton("edit", "Edit", EditSelected, theme.Accent); deleteButton = Ui.IconButton("delete", "Delete", DeleteSelected, theme.Accent); Group(editButton, deleteButton);
+            Group(Ui.IconButton("search", "Search", () => { page = "Transactions"; Render(); FocusSearch(); }, theme.Accent), Ui.IconButton("filter", "Filter", ShowFilters, theme.Accent));
         }
-        else if (ribbonTab == "Data")
+        else
         {
-            Group("Manage", Ui.IconButton("building_bank", "Accounts", () => Manage(true), Ui.Accent), Ui.IconButton("tag", "Categories", () => Manage(false), Ui.Accent), Ui.IconButton("calendar", "Period", SelectMonth, Ui.Accent));
-            Group("Allocation", Ui.IconButton("target", "Purpose", ManagePurposes, Ui.Accent));
-            Group("Planning",Ui.IconButton("savings","Wishlist",ShowWishlist,Ui.Accent),Ui.IconButton("money","Debt",ShowDebt,Ui.Accent));
+            var accent = theme.Accent;
+            Group(Ui.IconButton("building_bank", "Accounts", () => Manage(true), accent), Ui.IconButton("tag", "Categories", () => Manage(false), accent), Ui.IconButton("calendar", "Period", SelectMonth, accent));
+            Group(Ui.IconButton("target", "Purpose", ManagePurposes, accent));
+            Group(Ui.IconButton("savings","Wishlist",ShowWishlist,accent),Ui.IconButton("money","Debt",ShowDebt,accent));
         }
-        else Group("Workspace", Ui.IconButton("money", "Overview", () => { page = "Overview"; Render(); }, Ui.Accent), Ui.IconButton("document", "Transactions", () => { page = "Transactions"; Render(); }, Ui.Accent),Ui.IconButton("savings","Wishlist",ShowWishlist,Ui.Accent),Ui.IconButton("money","Debt",ShowDebt,Ui.Accent));
-        var border = new Border { Child = groups, Background = Brushes.White, BorderBrush = Ui.Line, BorderThickness = new Thickness(0,0,0,1) }; stack.Children.Add(border); return stack;
+        UIElement commandRow = groups;
+        if (page == "Overview" && session.Document.Banks.Count > 0)
+        {
+            var summary = OverviewRibbonSummary(theme);
+            var commands = new DockPanel();
+            DockPanel.SetDock(groups, Dock.Left);
+            DockPanel.SetDock(summary, Dock.Right);
+            commands.Children.Add(groups);
+            commands.Children.Add(summary);
+            commands.LastChildFill = false;
+            commandRow = new ScrollViewer
+            {
+                Content = commands, HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled
+            };
+        }
+        var border = new Border { Child = commandRow, Background = theme.Surface, BorderBrush = theme.Outline, BorderThickness = new Thickness(0,0,0,1) }; stack.Children.Add(border); return stack;
     }
-    private UIElement BuildSidebar()
+    private UIElement BuildSidebar(WorkspaceTheme theme)
     {
-        var s = Ui.Stack(); s.Width = 200; s.Margin = new Thickness(0);
-        var label = Ui.Text("Bank Accounts", 15, bold: true); label.Margin = new Thickness(12); s.Children.Add(label);
+        var s = Ui.Stack();
+        var label = Ui.Text("Bank Accounts", 15, theme.Muted, bold: true); label.Margin = new Thickness(12); s.Children.Add(label);
         void BankButton(string name, Guid? id)
         {
-            var active = selectedBank == id; var b = Ui.Button(name, () => { selectedBank = id; Render(); }); b.HorizontalContentAlignment = HorizontalAlignment.Left; b.Padding = new Thickness(12,8,12,8); b.Margin = new Thickness(0); b.FontSize = 12; Ui.SelectNavigation(b,active); s.Children.Add(b);
+            var active = selectedBank == id; var b = Ui.Button(name, () => { selectedBank = id; Render(); }); b.HorizontalContentAlignment = HorizontalAlignment.Left; b.Padding = new Thickness(12,8,12,8); b.Margin = new Thickness(0); b.FontSize = 12;
+            theme.StyleButton(b, selected: active, square: true);
+            b.Margin = new Thickness(0,0,0,4);
+            b.Padding = new Thickness(20,8,12,8);
+            b.FontSize = 14;
+            b.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+            b.ContentTemplate = (DataTemplate)FindResource("WorkspaceBankName");
+            b.ToolTip = name;
+            s.Children.Add(b);
         }
         BankButton("All accounts", null); foreach (var b in session.Document.Banks.OrderBy(b => b.Name)) BankButton(b.Name, b.Id);
-        var add = Ui.Button("Manage Banks", () => Manage(true)); add.Margin = new Thickness(12,16,12,0); add.FontSize = 12; add.Foreground = Ui.Accent; s.Children.Add(add);
-        return new Border { Child = s, Background = Ui.Brush("#FBFBFC"), BorderBrush = Ui.Line, BorderThickness = new Thickness(0,0,1,0) };
+        return new Border { Child = s, Background = theme.Sidebar, BorderBrush = theme.Outline, BorderThickness = new Thickness(0,0,1,0) };
     }
-    private UIElement PageHeader(string heading)
+    private UIElement PageHeader(string heading, WorkspaceTheme theme)
     {
-        var header = new DockPanel { Margin = new Thickness(12,8,12,8) };
+        var header = new DockPanel { Margin = new Thickness(24,2,24,2) };
         var period = Ui.Stack(Orientation.Horizontal);
-        var prev = Ui.SquareIconButton("chevron_left", () => MoveMonth(-1), "Previous period"); period.Children.Add(prev);
+        var prev = Ui.SquareIconButton("chevron_left", () => MoveMonth(-1), "Previous period", color: theme.Accent); period.Children.Add(prev);
         var label = periodMode == ReportPeriodMode.CalendarMonth ? month.ToString("MMMM yyyy", Display.Culture) : periodMode == ReportPeriodMode.PayCycle ? "Pay Cycle · " + month.ToString("MMM yyyy",Display.Culture) : "Custom Range";
         var monthButton = Ui.Button(label, SelectMonth); monthButton.MinWidth = 180; period.Children.Add(monthButton);
-        var next = Ui.SquareIconButton("chevron_right", () => MoveMonth(1), "Next period"); period.Children.Add(next);
-        var title = Ui.Stack(); title.Children.Add(Ui.Text(heading,24,bold:true)); var range = SelectedRange; title.Children.Add(Ui.Text(Display.Date(range.Start) + " – " + Display.Date(range.End),12,Ui.Muted));
-        DockPanel.SetDock(period, Dock.Right); header.Children.Add(period); header.Children.Add(title); return new Border { Child = header, BorderBrush = Ui.Line, BorderThickness = new Thickness(0,0,0,1) };
+        var next = Ui.SquareIconButton("chevron_right", () => MoveMonth(1), "Next period", color: theme.Accent); period.Children.Add(next);
+        monthButton.Height = prev.Height;
+        monthButton.Padding = new Thickness(12, 0, 12, 0);
+        monthButton.VerticalAlignment = VerticalAlignment.Center;
+        foreach (Button button in period.Children) theme.StyleButton(button, outlined: true);
+        AutomationProperties.SetName(prev, "Previous period");
+        AutomationProperties.SetName(next, "Next period");
+        var title = new DockPanel();
+        var headingText = Ui.Text(heading, 20, theme.Text, bold: true);
+        var range = SelectedRange;
+        var dates = Ui.Text(Display.Date(range.Start) + " – " + Display.Date(range.End), 14, theme.Muted);
+        dates.Margin = new Thickness(12, 0, 0, 0);
+        dates.TextWrapping = TextWrapping.NoWrap;
+        dates.TextTrimming = TextTrimming.CharacterEllipsis;
+        dates.ToolTip = dates.Text;
+        DockPanel.SetDock(headingText, Dock.Left);
+        title.Children.Add(headingText);
+        title.Children.Add(dates);
+        DockPanel.SetDock(period, Dock.Right); header.Children.Add(period); header.Children.Add(title);
+        return new Border { Child = header, BorderBrush = theme.Rule, BorderThickness = new Thickness(0,0,0,1) };
     }
     private void MoveMonth(int offset)
     {
@@ -237,42 +462,11 @@ public sealed partial class MainWindow : Window
     }
     private void RestorePeriod(ReportPeriod period)
     { periodMode = period.Mode; month = period.Month; customStart = period.CustomStart; customEnd = period.CustomEnd; }
-    private UIElement Overview()
-    {
-        var outer = new DockPanel { Margin = new Thickness(0), Background = Brushes.White }; var header = PageHeader("Overview"); DockPanel.SetDock(header, Dock.Top); outer.Children.Add(header);
-        var stack = Ui.Stack();
-        if (session.Document.Banks.Count == 0)
-        {
-            var empty = Ui.Stack(); empty.Children.Add(Ui.Text("Add your first bank", 24, bold:true)); var help = Ui.Text("Set an opening date and balance, then start recording transactions.", 15, Ui.Muted); help.Margin = new Thickness(0,12,0,20); empty.Children.Add(help); var button = Ui.Button("Add Bank", () => AddFirstBank(), true); button.HorizontalAlignment = HorizontalAlignment.Left; empty.Children.Add(button); stack.Children.Add(Ui.Box(empty, new Thickness(28)));
-        }
-        else
-        {
-            var top = new Grid(); top.ColumnDefinitions.Add(new ColumnDefinition()); top.ColumnDefinitions.Add(new ColumnDefinition());
-            var balancePanel = Ui.Stack(); balancePanel.Margin = new Thickness(0,0,16,0); balancePanel.Children.Add(Ui.Text(selectedBank is null ? "Total Balance" : session.Document.BankName(selectedBank.Value) + " Balance", 18, bold:true));
-            var today = DateOnly.FromDateTime(DateTime.Today); var banks = session.Document.Banks.Where(b => selectedBank is null || b.Id == selectedBank).ToList();
-            var total = banks.Sum(b => session.Document.Balance(b.Id, today)); var value = Ui.Text(Display.Money(total), 28, total < 0 ? Ui.Red : Ui.Accent, true); value.Margin = new Thickness(0,12,0,4); balancePanel.Children.Add(value); balancePanel.Children.Add(Ui.Text("Current balance as of " + Display.Date(today), 12, Ui.Muted));
-            var reserved=banks.Sum(b=>session.Document.WishlistReserved(b.Id,today));
-            var allocated=Ui.Text("Wishlist Allocation: "+Display.Money(reserved),14,Ui.Muted);allocated.Margin=new Thickness(0,8,0,0);balancePanel.Children.Add(allocated);
-            balancePanel.Children.Add(Ui.Text("Available Balance: "+Display.Money(total-reserved),16,bold:true));
-            foreach (var bank in banks) { var row = new DockPanel { Margin = new Thickness(0,12,0,0) }; var amount = Ui.Text(Display.Money(session.Document.Balance(bank.Id, today)), 14); DockPanel.SetDock(amount,Dock.Right); row.Children.Add(amount); row.Children.Add(Ui.Text(bank.Name,14)); balancePanel.Children.Add(row); }
-            top.Children.Add(balancePanel);
-            var summary = Ui.Stack(); summary.Margin = new Thickness(16,0,0,0); summary.Children.Add(Ui.Text(periodMode == ReportPeriodMode.CalendarMonth ? month.ToString("MMMM yyyy", Display.Culture) : periodMode == ReportPeriodMode.PayCycle ? "Pay Cycle" : "Custom Range",18,bold:true));
-            var range = SelectedRange; if (periodMode != ReportPeriodMode.CalendarMonth) summary.Children.Add(Ui.Text(Display.Date(range.Start) + " – " + Display.Date(range.End),12,Ui.Muted));
-            var totals = session.Document.Totals(range.Start, range.End, selectedBank);
-            foreach (var (label, amount, color) in new[] { ("Income", totals.Income, Ui.Green), ("Expenses", totals.Expense, Ui.Red), ("Net Income", totals.Income - totals.Expense, Ui.Ink) })
-            { var row = new DockPanel { Margin = new Thickness(0,16,0,0) }; var money = Ui.Text(Display.Money(amount),16,color,true); DockPanel.SetDock(money,Dock.Right); row.Children.Add(money); row.Children.Add(Ui.Text(label,14)); summary.Children.Add(row); }
-            var summaryBorder = new Border { BorderBrush = Ui.Line, BorderThickness = new Thickness(1,0,0,0), Child = summary }; Grid.SetColumn(summaryBorder,1); top.Children.Add(summaryBorder); stack.Children.Add(new Border { Child = top, Padding = new Thickness(12), BorderBrush = Ui.Line, BorderThickness = new Thickness(0,0,0,1) });
-            var recent = Ui.Stack(); recent.Margin = new Thickness(0); var recentTitle = Ui.Text("Recent Transactions",18,bold:true); recentTitle.Margin = new Thickness(12); recent.Children.Add(recentTitle);
-            var grid = MakeLedger(false); var recentRows = Rows(false).Take(5).ToList(); grid.ItemsSource = recentRows; grid.Height = recentRows.Count == 0 ? 160 : 34 + 32 * recentRows.Count;
-            recent.Children.Add(Ui.LedgerSurface(grid,"No transactions in this period","Choose another period or add an Income, Expense, or Transfer.")); stack.Children.Add(recent);
-        }
-        outer.Children.Add(new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto }); return outer;
-    }
     private List<LedgerRow> Rows(bool filter)
     {
         var range = SelectedRange;
         IEnumerable<LedgerRow> rows = session.Document.Transactions.Where(t => range.Contains(t.Date) && (selectedBank is null || t.BankId == selectedBank || t.ToBankId == selectedBank))
-            .OrderByDescending(t => t.Date).ThenByDescending(t => session.Document.Transactions.IndexOf(t)).SelectMany(t => LedgerRow.From(session.Document,t)).Where(r => !r.IsFee || selectedBank is null || r.Item.BankId == selectedBank);
+            .OrderByDescending(t => t.Date).ThenByDescending(t => session.Document.Transactions.IndexOf(t)).SelectMany(t => LedgerRow.From(session.Document,t,Theme)).Where(r => !r.IsFee || selectedBank is null || r.Item.BankId == selectedBank);
         if (filter)
         {
             if (typeFilter != "All types") rows = rows.Where(r => r.Type == typeFilter);
@@ -283,39 +477,56 @@ public sealed partial class MainWindow : Window
         }
         return rows.ToList();
     }
-    private DataGrid MakeLedger(bool full)
+    private DataGrid MakeLedger()
     {
         // Star widths plus frozen columns can oscillate after a DPI round trip
         // when WPF rounds every measure to device pixels.
-        var grid = new DataGrid { Margin = new Thickness(12,0,12,0), FrozenColumnCount = 1, UseLayoutRounding = false };
+        var theme = Theme;
+        var grid = new DataGrid
+        {
+            FrozenColumnCount = 1, UseLayoutRounding = false,
+            Background = theme.Surface, RowBackground = theme.Surface, AlternatingRowBackground = theme.Surface,
+            Foreground = theme.Text, BorderThickness = new Thickness(0), HorizontalGridLinesBrush = theme.Rule
+        };
         var date = Ui.Column("Date", "Date", 1); date.SortMemberPath = "SortDate"; date.Width = 120; date.MinWidth = date.MaxWidth = 120;
         grid.Columns.Add(date); grid.Columns.Add(Ui.TypeColumn());
         var bank = Ui.Column("Bank Account", "Bank", 1.4); bank.MinWidth = 160; grid.Columns.Add(bank);
-        if (full) { var category = Ui.Column("Category", "Category", 1.1); category.MinWidth = 144; grid.Columns.Add(category); }
+        var category = Ui.Column("Category", "Category", 1.1); category.MinWidth = 144; grid.Columns.Add(category);
         var description = Ui.Column("Description", "Description", 2.8); description.MinWidth = 220; grid.Columns.Add(description);
-        if (full)
-        {
-            grid.Columns.Add(Ui.AllocationColumn()); grid.Columns.Add(Ui.DebtColumn());
-        }
+        grid.Columns.Add(Ui.AllocationColumn(theme.Accent, theme.Muted)); grid.Columns.Add(Ui.DebtColumn(theme.Accent, theme.Muted));
         var amount = Ui.Column("Amount","Amount",1.5,true); amount.MinWidth = 184; amount.SortMemberPath = "NumericAmount"; grid.Columns.Add(amount);
+        foreach (var column in grid.Columns)
+            column.HeaderStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0, 0, 0, 1)));
         grid.SelectionChanged += (_, _) => { if (editButton is not null) editButton.IsEnabled = ledger?.SelectedItem is LedgerRow; if (deleteButton is not null) deleteButton.IsEnabled = ledger?.SelectedItem is LedgerRow; };
-        if (full) grid.MouseDoubleClick += (_, e) => { var d = e.OriginalSource as DependencyObject; while (d is not null && d is not DataGridRow) d = VisualTreeHelper.GetParent(d); if (d is DataGridRow) EditSelected(); };
+        grid.MouseDoubleClick += (_, e) => { var d = e.OriginalSource as DependencyObject; while (d is not null && d is not DataGridRow) d = VisualTreeHelper.GetParent(d); if (d is DataGridRow) EditSelected(); };
         return grid;
     }
     private UIElement TransactionsPage()
     {
-        var outer = new DockPanel { Margin = new Thickness(0), Background = Brushes.White }; var header = PageHeader("Transactions"); DockPanel.SetDock(header,Dock.Top); outer.Children.Add(header);
-        var filters = new DockPanel { Margin = new Thickness(12,8,12,8) };
+        var theme = Theme;
+        var outer = new DockPanel { Background = theme.Background }; var header = PageHeader("Transactions", theme); DockPanel.SetDock(header,Dock.Top); outer.Children.Add(header);
+        var cardContent = new DockPanel();
+        var filters = new DockPanel { Margin = new Thickness(0, 0, 0, 12) };
         var bankCombo = new ComboBox { Width = 190, DisplayMemberPath = "Name", ItemsSource = new[] { new BankChoice(null,"All accounts") }.Concat(session.Document.Banks.OrderBy(b => b.Name).Select(b => new BankChoice(b.Id,b.Name))).ToList(), SelectedValuePath = "Id", SelectedValue = selectedBank, Margin = new Thickness(0,0,4,0) };
+        bankCombo.Background = theme.Surface; bankCombo.Foreground = theme.Text; bankCombo.BorderBrush = theme.Outline;
         bankCombo.SelectedIndex = selectedBank is null ? 0 : session.Document.Banks.OrderBy(b => b.Name).ToList().FindIndex(b => b.Id == selectedBank) + 1;
         bankCombo.SelectionChanged += (_, _) => { selectedBank = (bankCombo.SelectedItem as BankChoice)?.Id; Render(); }; DockPanel.SetDock(bankCombo,Dock.Left); filters.Children.Add(bankCombo);
-        var clear = Ui.Button("Clear Filters", () => { search = ""; typeFilter = "All types"; categoryFilter = null; purposeFilter = null; selectedBank = null; debtTrackingFilter="All transactions"; Render(); }); clear.Margin = new Thickness(4,0,0,0); DockPanel.SetDock(clear,Dock.Right); filters.Children.Add(clear);
-        searchBox = new TextBox { Text = search, ToolTip = "Search transactions (Ctrl+F)", VerticalContentAlignment = VerticalAlignment.Center };
+        var clear = theme.ActionButton("Clear Filters", () => { search = ""; typeFilter = "All types"; categoryFilter = null; purposeFilter = null; selectedBank = null; debtTrackingFilter="All transactions"; Render(); }); clear.Margin = new Thickness(4,0,0,0); DockPanel.SetDock(clear,Dock.Right); filters.Children.Add(clear);
+        searchBox = new TextBox { Text = search, ToolTip = "Search transactions (Ctrl+F)", VerticalContentAlignment = VerticalAlignment.Center,
+            Background = theme.Surface, Foreground = theme.Text, CaretBrush = theme.Text, SelectionBrush = theme.Accent };
+        searchBox.SetCurrentValue(Control.BorderBrushProperty, theme.Outline);
         searchBox.TextChanged += (_, _) => { search = searchBox.Text; if (ledger is not null) Ui.RefreshLedger(ledger,Rows(true)); };
-        filters.Children.Add(searchBox); DockPanel.SetDock(filters,Dock.Top); outer.Children.Add(filters);
-        if (typeFilter != "All types" || categoryFilter is not null || purposeFilter is not null||debtTrackingFilter!="All transactions") { var note = Ui.Text("Filter: " + typeFilter + (categoryFilter is Guid id ? " · " + session.Document.CategoryName(id) : "") + (purposeFilter is Guid purpose ? " · Purpose: " + session.Document.PurposeName(purpose) : "")+(debtTrackingFilter!="All transactions"?" · "+debtTrackingFilter:""),12,Ui.Accent); note.Margin = new Thickness(0,0,0,12); DockPanel.SetDock(note,Dock.Top); outer.Children.Add(note); }
-        var hint = Ui.Text("Select a row to edit or delete. Admin Fee rows are linked to their original transaction.",12,Ui.Muted); hint.Margin = new Thickness(12,8,12,8); DockPanel.SetDock(hint,Dock.Bottom); outer.Children.Add(hint);
-        ledger = MakeLedger(true); ledger.ItemsSource = Rows(true); outer.Children.Add(Ui.LedgerSurface(ledger,"No transactions to display","Choose another period or adjust your search and filters.")); return outer;
+        filters.Children.Add(searchBox); DockPanel.SetDock(filters,Dock.Top); cardContent.Children.Add(filters);
+        if (typeFilter != "All types" || categoryFilter is not null || purposeFilter is not null||debtTrackingFilter!="All transactions") { var note = theme.Label("Filter: " + typeFilter + (categoryFilter is Guid id ? " · " + session.Document.CategoryName(id) : "") + (purposeFilter is Guid purpose ? " · Purpose: " + session.Document.PurposeName(purpose) : "")+(debtTrackingFilter!="All transactions"?" · "+debtTrackingFilter:""),12,theme.Accent); note.Margin = new Thickness(0,0,0,8); DockPanel.SetDock(note,Dock.Top); cardContent.Children.Add(note); }
+        var hint = theme.Label("Select a row to edit or delete. Admin Fee rows are linked to their original transaction.",12,theme.Muted); hint.Margin = new Thickness(0,10,0,0); DockPanel.SetDock(hint,Dock.Bottom); cardContent.Children.Add(hint);
+        ledger = MakeLedger();
+        ledger.ItemsSource = Rows(true);
+        var surface = Ui.LedgerSurface(ledger, "No transactions to display", "Choose another period or adjust your search and filters.", theme.Text, theme.Muted);
+        cardContent.Children.Add(surface);
+        var card = theme.Card(cardContent, new Thickness(12));
+        card.Margin = new Thickness(12);
+        outer.Children.Add(card);
+        return outer;
     }
     private void FocusSearch()
     {
@@ -328,26 +539,12 @@ public sealed partial class MainWindow : Window
     private void ShowFilters()
     {
         var dialog = new FormWindow(this,"Filter Transactions","Choose a type, category, purpose, or debt tracking filter. Bank and selected period filters also apply.","Apply",480);
-        var s = Ui.Stack(); var types = new ComboBox { ItemsSource = new[] { "All types", "Income", "Expense", "Transfer" }, SelectedItem = typeFilter, Margin = new Thickness(0,8,0,16) }; s.Children.Add(Ui.Text("Type")); s.Children.Add(types);
-        var cats = new ComboBox { DisplayMemberPath = "Name", ItemsSource = new[] { new BankChoice(null,"All categories"), new BankChoice(FinanceDocument.AdminFeeFilterId,"Admin Fee (System)") }.Concat(session.Document.Categories.OrderBy(c => c.Kind).ThenBy(c => c.Name).Select(c => new BankChoice(c.Id,$"{c.Name} ({c.Kind})"))).ToList(), SelectedValuePath = "Id", SelectedValue = categoryFilter }; if (categoryFilter is null) cats.SelectedIndex = 0; s.Children.Add(Ui.Text("Category")); s.Children.Add(cats);
-        var purposes = new ComboBox { DisplayMemberPath = "Name", ItemsSource = new[] { new BankChoice(null,"All purposes") }.Concat(session.Document.Purposes.OrderBy(p => p.Name).Select(p => new BankChoice(p.Id,p.Name))).ToList(), SelectedValuePath = "Id", SelectedValue = purposeFilter, Margin = new Thickness(0,8,0,0) }; if (purposeFilter is null) purposes.SelectedIndex = 0; var purposeLabel = Ui.Text("Purpose"); purposeLabel.Margin = new Thickness(0,16,0,0); s.Children.Add(purposeLabel); s.Children.Add(purposes);
-        var debtFilter=new ComboBox{ItemsSource=new[]{"All transactions","Tracked debts","Not tracked"},SelectedItem=debtTrackingFilter,Margin=new Thickness(0,8,0,0)};var debtLabel=Ui.Text("Debt tracking");debtLabel.Margin=new Thickness(0,16,0,0);s.Children.Add(debtLabel);s.Children.Add(debtFilter);
+        var s = Ui.Stack(); var types = new ComboBox { ItemsSource = new[] { "All types", "Income", "Expense", "Transfer" }, SelectedItem = typeFilter, Margin = new Thickness(0,8,0,16) }; s.Children.Add(Theme.Label("Type")); s.Children.Add(types);
+        var cats = new ComboBox { DisplayMemberPath = "Name", ItemsSource = new[] { new BankChoice(null,"All categories"), new BankChoice(FinanceDocument.AdminFeeFilterId,"Admin Fee (System)") }.Concat(session.Document.Categories.OrderBy(c => c.Kind).ThenBy(c => c.Name).Select(c => new BankChoice(c.Id,$"{c.Name} ({c.Kind})"))).ToList(), SelectedValuePath = "Id", SelectedValue = categoryFilter }; if (categoryFilter is null) cats.SelectedIndex = 0; s.Children.Add(Theme.Label("Category")); s.Children.Add(cats);
+        var purposes = new ComboBox { DisplayMemberPath = "Name", ItemsSource = new[] { new BankChoice(null,"All purposes") }.Concat(session.Document.Purposes.OrderBy(p => p.Name).Select(p => new BankChoice(p.Id,p.Name))).ToList(), SelectedValuePath = "Id", SelectedValue = purposeFilter, Margin = new Thickness(0,8,0,0) }; if (purposeFilter is null) purposes.SelectedIndex = 0; var purposeLabel = Theme.Label("Purpose"); purposeLabel.Margin = new Thickness(0,16,0,0); s.Children.Add(purposeLabel); s.Children.Add(purposes);
+        var debtFilter=new ComboBox{ItemsSource=new[]{"All transactions","Tracked debts","Not tracked"},SelectedItem=debtTrackingFilter,Margin=new Thickness(0,8,0,0)};var debtLabel=Theme.Label("Debt tracking");debtLabel.Margin=new Thickness(0,16,0,0);s.Children.Add(debtLabel);s.Children.Add(debtFilter);
         dialog.AddFields(s); dialog.OnSubmit(() => { typeFilter = (string)types.SelectedItem; categoryFilter = (cats.SelectedItem as BankChoice)?.Id; purposeFilter = (purposes.SelectedItem as BankChoice)?.Id; debtTrackingFilter=(string)debtFilter.SelectedItem;page = "Transactions"; }); if (dialog.ShowDialog() == true) Render();
     }
-    private UIElement FilePage()
-    {
-        var grid = new Grid(); grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(184) }); grid.ColumnDefinitions.Add(new ColumnDefinition());
-        var nav = Ui.Stack(); nav.Background = Ui.Accent; nav.Margin = new Thickness(0);
-        var back = Ui.IconButton("arrow_left","Back",() => { backstage = false; Render(); },Brushes.White,false); back.Style = (Style)FindResource("BackstageButton"); back.Content = BackLabel(); back.Padding = new Thickness(16); back.Margin = new Thickness(0,8,0,16); nav.Children.Add(back);
-        foreach (var (label,icon,action) in new (string,string,Action)[] { ("New","document",NewDocument),("Open","folder_open",OpenDocument),("Save","save",() => Save()),("Save As","save",() => Save(true)),("Close","folder_open",CloseDocument) })
-        { var b = Ui.IconButton(icon,label,action,Brushes.White,false); b.Style = (Style)FindResource("BackstageButton"); b.Padding = new Thickness(16,12,16,12); b.Margin = new Thickness(0); var s = (StackPanel)b.Content; ((TextBlock)s.Children[1]).Foreground = Brushes.White; ((TextBlock)s.Children[1]).FontSize = 12; b.Foreground = Brushes.White; nav.Children.Add(b); } grid.Children.Add(nav);
-        var info = Ui.Stack(); info.Margin = new Thickness(32); info.Children.Add(Ui.Text("Save",32,bold:true)); var intro = Ui.Text("Save changes to your current file.",16,Ui.Muted); intro.Margin = new Thickness(0,12,0,32); info.Children.Add(intro);
-        var documentRow = new DockPanel(); var documentIcon = Ui.Icon("document",64,Ui.Ink); documentIcon.VerticalAlignment = VerticalAlignment.Top; documentIcon.Margin = new Thickness(0,0,28,0); DockPanel.SetDock(documentIcon,Dock.Left); documentRow.Children.Add(documentIcon);
-        var details = Ui.Stack(); var filename = Ui.Text(NameOfDocument + ".mpb",20,bold:true); filename.Margin = new Thickness(0,0,0,16); details.Children.Add(filename); details.Children.Add(Ui.Text("Location:",14,Ui.Muted)); details.Children.Add(Ui.Text(session.FilePath ?? "Choose a name and location when you first save.",15,Ui.Muted));
-        var note = Ui.Text(session.Dirty ? "Unsaved changes" : session.FilePath is null ? "Not saved yet" : "All changes saved",14,Ui.Muted); note.Margin = new Thickness(0,16,0,24); details.Children.Add(note); var save = Ui.Button("Save",() => Save(),true); save.Width = 180; save.HorizontalAlignment = HorizontalAlignment.Left; details.Children.Add(save); documentRow.Children.Add(details); info.Children.Add(documentRow);
-        Grid.SetColumn(info,1); grid.Children.Add(new ScrollViewer { Content = info, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Margin = new Thickness(0,0,0,64) }.AtColumn(1)); AddUpdateCorner(grid); return grid;
-    }
-    private UIElement BackLabel() { var s = Ui.Stack(Orientation.Horizontal); s.Children.Add(Ui.Icon("arrow_left",24,Brushes.White)); var text = Ui.Text("Back",12,Brushes.White); text.Margin = new Thickness(12,0,0,0); s.Children.Add(text); return s; }
     internal async Task<bool> InstallUpdateAsync(StagedUpdate package)
     {
         if (hasDocument && session.Dirty)
@@ -364,7 +561,7 @@ public sealed partial class MainWindow : Window
         if (!hasDocument || !session.Dirty) return true;
         return ConfirmDialog.Unsaved(this,NameOfDocument + ".mpb") switch { "Save" => Save(), "Don't Save" => true, _ => false };
     }
-    private void ResetView() { ResetWishlistViewport();ResetDebtView(); RestorePeriod(ReportPeriod.Restore(session.Document,DateOnly.FromDateTime(DateTime.Today))); selectedBank = null; categoryFilter = null; purposeFilter = null; search = ""; typeFilter = "All types"; debtTrackingFilter="All transactions";page = "Overview"; ribbonTab = "Home"; backstage = false; }
+    private void ResetView() { ResetWishlistViewport();ResetDebtView(); RestorePeriod(ReportPeriod.Restore(session.Document,DateOnly.FromDateTime(DateTime.Today))); selectedBank = null; categoryFilter = null; purposeFilter = null; search = ""; typeFilter = "All types"; debtTrackingFilter="All transactions";page = "Overview"; ribbonTab = "Home"; }
     private void NewDocument() { if (!CanLeave()) return; session.New(); hasDocument = true; ResetView(); Render(); }
     private void OpenDocument()
     {
@@ -427,9 +624,4 @@ public sealed partial class MainWindow : Window
         if (banks.Count > 0 && !ConfirmDialog.Confirm(this,"Negative balance","Deleting this transaction leaves a negative balance in the recorded history of: " + string.Join(", ",banks.Select(copy.BankName)) + ". Continue?","Continue")) return;
         try { session.Apply(copy); Render(); } catch(InvalidDataException e){ConfirmDialog.Alert(this,"Could not delete transaction",e.Message);}
     }
-}
-
-internal static class LayoutExtensions
-{
-    public static T AtColumn<T>(this T element, int column) where T : UIElement { Grid.SetColumn(element,column); return element; }
 }
