@@ -1,4 +1,10 @@
-# Verification — 0.2.2.3
+# Verification — 0.2.2.4
+
+## Group detail popups
+
+[Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/45509508946) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/45509757466) passed for commit `3a1c069`. The WPF group check opened a debt popup, verified its payment action and confirmed that closing it restored the group. The verified package contained the tagged executable. A format 15 fixture with 125 transactions reopened with equivalent data after saving a copy.
+
+The public update channel offered 0.2.2.4 to versions 0.1.1.3 and 0.2.2.3 and reported 0.2.2.4 as up to date. The web installer resolved 0.2.2.4.
 
 ## Paid debt indicators
 
@@ -26,7 +32,7 @@ After channel promotion, the live updater offered 0.2.2.0 to clients reporting 0
 
 ## Baseline scope
 
-The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.2.2.3**, update epoch **3**, and document format **15**.
+The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.2.2.4**, update epoch **3**, and document format **15**.
 
 ## Automated checks
 
