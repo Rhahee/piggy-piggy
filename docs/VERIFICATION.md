@@ -1,4 +1,10 @@
-# Verification — 0.2.2.0
+# Verification — 0.2.2.1
+
+## Standalone group creation
+
+[Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/45499518306) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/45499798762) passed for commit `9fb2e4f`. The verified portable executable reported 0.2.2.1 and the tagged commit. A format 13 fixture with 125 transactions reopened with equivalent data after saving to format 14. The original fixture hash was preserved.
+
+The public update channel offered 0.2.2.1 to versions 0.1.1.3 and 0.2.2.0 and reported 0.2.2.1 as up to date. The web installer resolved 0.2.2.1.
 
 ## Debt Groups release
 
@@ -8,7 +14,7 @@ After channel promotion, the live updater offered 0.2.2.0 to clients reporting 0
 
 ## Baseline scope
 
-The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.2.2.0**, update epoch **3**, and document format **13**.
+The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.2.2.1**, update epoch **3**, and document format **14**.
 
 ## Automated checks
 
