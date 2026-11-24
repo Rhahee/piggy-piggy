@@ -13,6 +13,7 @@
 | [Rilis 0.1.1.0](releases/0.1.1.0.md) | Web installer, perbaikan DPI dan versi Windows |
 | [Rilis 0.1.1.1](releases/0.1.1.1.md) | Ikon grayscale MPB dan perbaikan kepemilikan asosiasi |
 | [Rilis 0.2.1.1](releases/0.2.1.1.md) | Tabel Goals dan baris saldo bebas |
+| [Rilis 0.2.2.0](releases/0.2.2.0.md) | Grup hutang dan ringkasan pembayaran |
 | [Rilis 0.2.1.2](releases/0.2.1.2.md) | Workspace terang/gelap dan koreksi tanggal pembelian Shared Budget |
 | [Rilis 0.2.1.0](releases/0.2.1.0.md) | Progress Shared Budget dan hapus goal |
 | [Rilis 0.2.0.0](releases/0.2.0.0.md) | Shared Budget dengan alokasi manual per goal |

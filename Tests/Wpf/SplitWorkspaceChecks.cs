@@ -12,6 +12,12 @@ internal static class SplitWorkspaceChecks
     private static object Field(MainWindow window, string name) => typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
     private static Task Idle(MainWindow window) => window.Dispatcher.InvokeAsync(() => window.UpdateLayout(), DispatcherPriority.ApplicationIdle).Task;
     private static void Require(bool value, string message) { if (!value) throw new Exception(message); }
+    private static IEnumerable<T> Descendants<T>(DependencyObject root) where T : DependencyObject
+    {
+        if (root is T match) yield return match;
+        foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
+            foreach (var item in Descendants<T>(child)) yield return item;
+    }
     private static IEnumerable<T> Visuals<T>(DependencyObject element) where T : DependencyObject
     {
         if (element is T item) yield return item;
@@ -26,8 +32,10 @@ internal static class SplitWorkspaceChecks
         var category = new Category(Guid.NewGuid(), "Fictional Loan", CategoryKind.Income);
         var document = new FinanceDocument { Banks = [bank], Categories = [category] };
         document = WishlistService.Create(document, new(Guid.NewGuid(), "Fictional Wishlist", 100_000, null, WishlistPriority.Normal, ""), new(2026, 10, 1));
-        var debt = new Debt(Guid.NewGuid(), "Fictional Debt", "Fictional Lender", null);
+        var debt = new Debt(Guid.NewGuid(), "Fictional Debt", "Fictional Lender", null, GroupName: "Gadgets");
         document = DebtService.SaveTransaction(document, new(Guid.NewGuid(), new(2026, 10, 1), TransactionKind.Income, bank.Id, null, category.Id, 100_000, 0, null, "", DebtId: debt.Id), debt);
+        var other = debt with { Id = Guid.NewGuid(), Name = "Camera", GroupName = "gadgets" };
+        document = DebtService.SaveTransaction(document, new(Guid.NewGuid(), new(2026, 10, 1), TransactionKind.Income, bank.Id, null, category.Id, 250_000, 0, null, "", DebtId: other.Id), other);
         var session = new DocumentSession(); session.Apply(document); session.Save(file);
         var original = System.IO.File.ReadAllBytes(file);
         var window = new MainWindow { Width = 1500, Height = 800, ShowInTaskbar = false };
@@ -39,6 +47,21 @@ internal static class SplitWorkspaceChecks
                 typeof(MainWindow).GetField("page", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(window, page);
                 typeof(MainWindow).GetMethod("Render", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)!.Invoke(window, null);
                 await Idle(window);
+                if (page == "Debt")
+                {
+                    var list = (ScrollViewer)Field(window, "debtListScroll");
+                    var group = Descendants<Button>(list).Single(button => Equals(button.Content, "Gadgets"));
+                    group.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    await Idle(window);
+                    var groupDetail = (ScrollViewer)Field(window, "debtDetailScroll");
+                    Require(Descendants<TextBlock>(groupDetail).Any(text => text.Text == Display.Money(350_000)), "Group total must include both debts.");
+                    var member = Descendants<Button>(groupDetail).Single(button => Equals(button.Content, "Camera"));
+                    member.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    await Idle(window);
+                    Require(Equals(Field(window, "selectedDebt"), other.Id), "Clicking a group row must select the individual debt.");
+                    var memberDetail = (ScrollViewer)Field(window, "debtDetailScroll");
+                    Require(Descendants<Button>(memberDetail).Any(button => Equals(button.Content, "Record Payment") && button.IsEnabled), "Grouped debt must still support individual payment.");
+                }
                 Visuals<CheckBox>(window).Single(toggle => AutomationProperties.GetName(toggle) == "Dark theme").IsChecked = true;
                 await Idle(window);
                 var layout = (DockPanel)((ContentControl)Field(window, "body")).Content;

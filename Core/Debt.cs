@@ -1,7 +1,7 @@
 namespace MyPiggyBank.Core;
 
 public enum DebtKind { External, Self }
-public sealed record Debt(Guid Id,string Name,string Lender,DateOnly? DueDate,bool IsPaid=false,DebtKind Kind=DebtKind.External,Guid? SelfBankId=null);
+public sealed record Debt(Guid Id,string Name,string Lender,DateOnly? DueDate,bool IsPaid=false,DebtKind Kind=DebtKind.External,Guid? SelfBankId=null,string? GroupName=null);
 public sealed record SelfDebtPayment(Guid DebtId,decimal Amount);
 public enum DebtStatus { Open,PartiallyPaid,PendingConfirmation,Paid }
 public sealed record DebtTotals(decimal Borrowed,decimal Paid) { public decimal Remaining => Borrowed-Paid; }
@@ -54,6 +54,8 @@ public sealed partial class FinanceDocument
         Require(Debts.All(d=>d.Id!=Guid.Empty)&&Debts.Select(d=>d.Id).Distinct().Count()==Debts.Count,"Debt identifiers must be unique.");
         foreach(var debt in Debts){
             Require(Enum.IsDefined(debt.Kind),"Choose a valid debt type.");
+            Require(debt.GroupName is null || Version >= 13 && debt.GroupName.Length is > 0 and <= 100 && debt.GroupName == debt.GroupName.Trim(),
+                "Enter a debt group name of up to 100 characters or leave it blank.");
             Require(!string.IsNullOrWhiteSpace(debt.Name)&&debt.Name==debt.Name.Trim()&&debt.Name.Length<=100,"Enter a debt name (up to 100 characters).");
             if(debt.Kind==DebtKind.External){
                 Require(!string.IsNullOrWhiteSpace(debt.Lender)&&debt.Lender==debt.Lender.Trim()&&debt.Lender.Length<=100,"Enter a lender (up to 100 characters).");
@@ -116,10 +118,15 @@ public static class DebtService
         var index=doc.Transactions.FindIndex(t=>t.Id==transaction.Id);if(index<0)doc.Transactions.Add(transaction);else doc.Transactions[index]=transaction;
         doc.Validate();return doc;
     }
-    public static FinanceDocument EditDetails(FinanceDocument source,Guid id,string name,string lender,DateOnly? dueDate)
+    public static FinanceDocument EditDetails(FinanceDocument source,Guid id,string name,string lender,DateOnly? dueDate,string? groupName=null)
     {
         var doc=source.Copy();var index=doc.Debts.FindIndex(d=>d.Id==id);FinanceDocument.Require(index>=0,"Choose an existing debt.");
-        doc.Debts[index]=doc.Debts[index] with{Name=name,Lender=lender,DueDate=dueDate};doc.Validate();return doc;
+        var debt = doc.Debts[index];
+        var group = groupName?.Trim();
+        doc.Debts[index] = debt with { Name = name, Lender = lender, DueDate = dueDate,
+            GroupName = group is null ? debt.GroupName : group.Length == 0 ? null : group };
+        doc.Validate();
+        return doc;
     }
     public static FinanceDocument SetPaid(FinanceDocument source,Guid id,bool paid)
     {

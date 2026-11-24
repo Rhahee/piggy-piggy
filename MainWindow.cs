@@ -104,7 +104,14 @@ public sealed partial class MainWindow : Window
             var visible=session.Document.Wishlists.Where(w=>selectedBank is null||session.Document.WishlistAllocated(w.Id,selectedBank)>0).ToList();
             if(!visible.Any(w=>w.Id==selectedWishlist))selectedWishlist=visible.FirstOrDefault()?.Id;
         }
-        if(page=="Debt"&&!VisibleDebts().Any(d=>d.Id==selectedDebt))selectedDebt=VisibleDebts().FirstOrDefault()?.Id;
+        if (page == "Debt")
+        {
+            var visible = VisibleDebts();
+            if (selectedDebtGroup is not null && !visible.Any(d => SameDebtGroup(d.GroupName, selectedDebtGroup)))
+                selectedDebtGroup = null;
+            if (selectedDebtGroup is null && !visible.Any(d => d.Id == selectedDebt))
+                selectedDebt = visible.FirstOrDefault()?.Id;
+        }
         var layout = new DockPanel();
         theme.ApplyTo(layout);
         var ribbon = BuildRibbon(theme); DockPanel.SetDock(ribbon, Dock.Top); layout.Children.Add(ribbon);

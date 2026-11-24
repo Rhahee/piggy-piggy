@@ -72,7 +72,7 @@ internal static class SharedPurchaseDateChecks
             Equal(source.WishlistEvents.Count, changed.WishlistEvents.Count);
             Equal(Later, changed.Transactions.Single().Date);
         });
-        test("format twelve surplus remains linked through save reopen and repeated date corrections", () => {
+        test("purchase surplus remains linked through save reopen and repeated date corrections", () => {
             var folder = Path.Combine(Path.GetTempPath(), "Piggy-date-group-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(folder);
             try
@@ -82,7 +82,7 @@ internal static class SharedPurchaseDateChecks
                 var purchase = Purchase(session.Document);
                 session.Apply(WishlistService.EditActivityDate(session.Document, purchase.Id, Later));
                 session.Save(file); session.Open(file);
-                Equal(12, session.Document.Version);
+                Equal(FinanceDocument.CurrentVersion, session.Document.Version);
                 var changed = WishlistService.EditPurchaseDate(session.Document, purchase.Id, Funded);
                 Equal(Funded, changed.Transactions.Single().Date);
                 var reversed = WishlistService.CorrectPurchase(changed, Budget.Id, Later, purchase.Id);

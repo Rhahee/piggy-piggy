@@ -10,10 +10,12 @@ namespace MyPiggyBank;
 public sealed partial class MainWindow
 {
     private Guid? selectedDebt,renderedDebt;
+    private string? selectedDebtGroup;
     private ScrollViewer? debtDetailScroll,debtListScroll;
     private readonly Dictionary<Guid,double> debtOffsets=[];
     private double debtListOffset;
-    private Debt? ActiveDebt => session.Document.Debts.FirstOrDefault(d=>d.Id==selectedDebt);
+    private Debt? ActiveDebt => selectedDebtGroup is null ? session.Document.Debts.FirstOrDefault(d=>d.Id==selectedDebt) : null;
+    private static bool SameDebtGroup(string? first, string? second) => StringComparer.OrdinalIgnoreCase.Equals(first, second);
     private List<Debt> VisibleDebts() => session.Document.Debts.Where(d=>selectedBank is null||session.Document.Transactions.Any(t=>session.Document.RelatedDebtIds(t).Contains(d.Id)&&(t.BankId==selectedBank||t.ToBankId==selectedBank))).ToList();
     private void ShowDebt(){page="Debt";Render();}
     private void CaptureDebtViewport()
@@ -21,34 +23,118 @@ public sealed partial class MainWindow
         if(debtDetailScroll?.IsLoaded==true&&renderedDebt is Guid id)debtOffsets[id]=debtDetailScroll.VerticalOffset;
         if(debtListScroll?.IsLoaded==true)debtListOffset=debtListScroll.VerticalOffset;debtDetailScroll=null;debtListScroll=null;
     }
-    private void ResetDebtView(){selectedDebt=null;renderedDebt=null;debtDetailScroll=null;debtListScroll=null;debtOffsets.Clear();debtListOffset=0;}
+    private void ResetDebtView(){selectedDebt=null;selectedDebtGroup=null;renderedDebt=null;debtDetailScroll=null;debtListScroll=null;debtOffsets.Clear();debtListOffset=0;}
     private UIElement DebtPage()
     {
         var doc=session.Document;var debts=VisibleDebts();var root=new DockPanel{Background=Theme.Background};
         var heading=Theme.SectionHeader("Debt","New Debt",()=>DebtAction("new"),"As of "+Display.Date(DateOnly.FromDateTime(DateTime.Today)));DockPanel.SetDock(heading,Dock.Top);root.Children.Add(heading);
-        var summary=new Grid();var values=new[]{("Principal",debts.Sum(d=>doc.DebtAmounts(d.Id).Borrowed)),("Principal Paid",debts.Sum(d=>doc.DebtAmounts(d.Id).Paid)),("Remaining Debt",debts.Sum(d=>doc.DebtAmounts(d.Id).Remaining))};
-        for(var i=0;i<values.Length;i++){summary.ColumnDefinitions.Add(new ColumnDefinition());var panel=Ui.Stack();panel.Children.Add(Theme.Label(values[i].Item1,12,Theme.Muted));panel.Children.Add(Theme.Label(Display.Money(values[i].Item2),18,i==2?Theme.Accent:Theme.Text));var cell=new Border{Child=panel,Padding=new Thickness(12),BorderBrush=Theme.Rule,BorderThickness=new Thickness(0,0,i<2?1:0,0)};Grid.SetColumn(cell,i);summary.Children.Add(cell);}
-        var totalsCard=Theme.Card(summary,new Thickness(4));totalsCard.Margin=new Thickness(12,8,12,0);DockPanel.SetDock(totalsCard,Dock.Top);root.Children.Add(totalsCard);
+        var totalsCard=DebtSummary(debts.Select(d => doc.DebtAmounts(d.Id)));totalsCard.Margin=new Thickness(12,8,12,0);DockPanel.SetDock(totalsCard,Dock.Top);root.Children.Add(totalsCard);
         var hint=Theme.Label(selectedBank is null?"Income and Expenses include the original transactions. Admin fees do not change debt principal.":"Account filter shows related debts. Each debt total includes all its linked accounts.",12,Theme.Muted);hint.Margin=new Thickness(12,8,12,8);DockPanel.SetDock(hint,Dock.Top);root.Children.Add(hint);
         if(debts.Count==0){var empty=Ui.Stack();empty.Children.Add(Theme.Label(doc.Debts.Count==0?"Track a debt":"No debts related to this account",20,bold:true));empty.Children.Add(Theme.Label("Use New Debt, or edit an existing Expense to track Self Debt. Income can track borrowing from a lender. Tracking does not create additional bank movements.",14,Theme.Muted));var card=Theme.Card(empty,new Thickness(20));card.VerticalAlignment=VerticalAlignment.Top;card.Margin=new Thickness(12);root.Children.Add(card);return root;}
-        if(!debts.Any(d=>d.Id==selectedDebt))selectedDebt=debts[0].Id;var changed=renderedDebt!=selectedDebt;renderedDebt=selectedDebt;
+        var id = ActiveDebt?.Id;
+        var changed = renderedDebt != id;
+        renderedDebt = id;
         var split=new Grid{Margin=new Thickness(12)};split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(248),MinWidth=184});split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(12)});split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star),MinWidth=380});
         Ui.ConstrainSplitList(root,split);
         var list=Ui.Stack();FrameworkElement? selectedButton=null;
-        foreach(var debt in debts){
+        foreach (var group in debts.Where(d => d.GroupName is not null).GroupBy(d => d.GroupName!, StringComparer.OrdinalIgnoreCase).OrderBy(g => g.Key))
+        {
+            var groupName = group.Key;
+            var button = Theme.ActionButton(groupName, () => { selectedDebtGroup = groupName; Render(); });
+            button.HorizontalContentAlignment = HorizontalAlignment.Left;
+            Theme.StyleButton(button, selected: SameDebtGroup(selectedDebtGroup, groupName));
+            list.Children.Add(button);
+        }
+        foreach(var debt in debts.Where(d => d.GroupName is null)){
             var body=Ui.Stack();body.Children.Add(Theme.Label(debt.Name,14,bold:true));body.Children.Add(Theme.Label(debt.Kind==DebtKind.Self?"Self Debt · "+doc.BankName(debt.SelfBankId!.Value):debt.Lender,12,Theme.Muted));body.Children.Add(Theme.Label(DebtService.StatusName(doc.DebtState(debt.Id))+(doc.DebtOverdue(debt.Id)?" · Overdue":""),12,doc.DebtOverdue(debt.Id)?Theme.Error:Theme.Muted));body.Children.Add(Theme.Label(Display.Money(doc.DebtAmounts(debt.Id).Remaining),14,Theme.Accent));
-            var button=Ui.Button("",()=>{selectedDebt=debt.Id;Render();});button.Content=body;button.HorizontalContentAlignment=HorizontalAlignment.Stretch;button.Margin=new Thickness(0,0,0,4);button.Padding=new Thickness(12,10,12,10);Theme.StyleButton(button,selected:debt.Id==selectedDebt);if(debt.Id==selectedDebt)selectedButton=button;
+            var button=Ui.Button("",()=>OpenDebt(debt));button.Content=body;button.HorizontalContentAlignment=HorizontalAlignment.Stretch;button.Margin=new Thickness(0,0,0,4);button.Padding=new Thickness(12,10,12,10);Theme.StyleButton(button,selected:debt.Id==id);if(debt.Id==id)selectedButton=button;
             list.Children.Add(button);
         }
         var listScroll=new ScrollViewer{Content=list,Background=Theme.Surface,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};debtListScroll=listScroll;split.Children.Add(Theme.Card(listScroll,new Thickness(8)));var divider=Theme.Splitter();Grid.SetColumn(divider,1);split.Children.Add(divider);
-        var detail=new ScrollViewer{Content=DebtDetail(ActiveDebt!),VerticalScrollBarVisibility=ScrollBarVisibility.Auto};debtDetailScroll=detail;var id=selectedDebt!.Value;
-        detail.Loaded+=(_,_)=>Dispatcher.BeginInvoke(DispatcherPriority.Loaded,new Action(()=>{if(!ReferenceEquals(debtDetailScroll,detail)||!detail.IsLoaded)return;listScroll.ScrollToVerticalOffset(debtListOffset);if(changed)selectedButton?.BringIntoView();detail.ScrollToVerticalOffset(debtOffsets.GetValueOrDefault(id));}));
+        var content = selectedDebtGroup is string groupKey ? DebtGroupDetail(groupKey, debts.Where(d => SameDebtGroup(d.GroupName, groupKey))) : DebtDetail(ActiveDebt!);
+        var detail=new ScrollViewer{Content=content,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};debtDetailScroll=detail;
+        detail.Loaded+=(_,_)=>Dispatcher.BeginInvoke(DispatcherPriority.Loaded,new Action(()=>{if(!ReferenceEquals(debtDetailScroll,detail)||!detail.IsLoaded)return;listScroll.ScrollToVerticalOffset(debtListOffset);if(changed)selectedButton?.BringIntoView();if(id is Guid debtId)detail.ScrollToVerticalOffset(debtOffsets.GetValueOrDefault(debtId));}));
         var detailCard=Theme.Card(detail,new Thickness(16,12,12,12));Grid.SetColumn(detailCard,2);split.Children.Add(detailCard);root.Children.Add(split);return root;
     }
+    private void OpenDebt(Debt debt)
+    {
+        selectedDebtGroup = null;
+        selectedDebt = debt.Id;
+        Render();
+    }
+
+    private Border DebtSummary(IEnumerable<DebtTotals> totals)
+    {
+        var amounts = totals.ToArray();
+        var grid = new Grid();
+        var values = new[] { ("Principal", amounts.Sum(t => t.Borrowed)), ("Principal Paid", amounts.Sum(t => t.Paid)), ("Remaining Debt", amounts.Sum(t => t.Remaining)) };
+        for (var i = 0; i < values.Length; i++)
+        {
+            grid.ColumnDefinitions.Add(new ColumnDefinition());
+            var panel = Ui.Stack();
+            panel.Children.Add(Theme.Label(values[i].Item1, 12, Theme.Muted));
+            panel.Children.Add(Theme.Label(Display.Money(values[i].Item2), 18, i == 2 ? Theme.Accent : Theme.Text));
+            var cell = new Border { Child = panel, Padding = new Thickness(12), BorderBrush = Theme.Rule,
+                BorderThickness = new Thickness(0, 0, i < 2 ? 1 : 0, 0) };
+            Grid.SetColumn(cell, i);
+            grid.Children.Add(cell);
+        }
+        return Theme.Card(grid, new Thickness(4));
+    }
+
+    private UIElement DebtGroupDetail(string name, IEnumerable<Debt> debts)
+    {
+        var doc = session.Document;
+        var members = debts.OrderBy(d => d.Name).Select(d => (Debt: d, Totals: doc.DebtAmounts(d.Id))).ToArray();
+        var panel = Ui.Stack();
+        panel.Children.Add(Theme.Label(name, 22, bold: true));
+        var summary = DebtSummary(members.Select(m => m.Totals));
+        summary.Margin = new Thickness(0, 8, 0, 12);
+        panel.Children.Add(summary);
+        var table = new Grid { MinWidth = 580 };
+        var widths = new[] { 150, 108, 108, 108, 106 };
+        foreach (var width in widths)
+            table.ColumnDefinitions.Add(new ColumnDefinition { MinWidth = width, Width = new GridLength(1, GridUnitType.Star) });
+        void Row(FrameworkElement debt, params string[] values)
+        {
+            var index = table.RowDefinitions.Count;
+            table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var rule = new Border { BorderBrush = Theme.Rule, BorderThickness = new Thickness(0, 0, 0, 1) };
+            Grid.SetRow(rule, index);
+            Grid.SetColumnSpan(rule, widths.Length);
+            table.Children.Add(rule);
+            Grid.SetRow(debt, index);
+            debt.Margin = new Thickness(8, 6, 8, 6);
+            table.Children.Add(debt);
+            for (var i = 0; i < values.Length; i++)
+            {
+                var label = Theme.Label(values[i], 13, index == 0 ? Theme.Muted : Theme.Text, bold: index == 0);
+                label.TextAlignment = i < 3 ? TextAlignment.Right : TextAlignment.Center;
+                label.Margin = new Thickness(8, 6, 8, 6);
+                Grid.SetRow(label, index);
+                Grid.SetColumn(label, i + 1);
+                table.Children.Add(label);
+            }
+        }
+        Row(Theme.Label("Debt", 13, Theme.Muted, bold: true), "Principal", "Paid", "Remaining", "Due Date");
+        foreach (var (debt, totals) in members)
+            Row(Theme.ActionButton(debt.Name, () => OpenDebt(debt)), Display.Money(totals.Borrowed), Display.Money(totals.Paid),
+                Display.Money(totals.Remaining), debt.DueDate is DateOnly due ? Display.Date(due) : "—");
+        panel.Children.Add(new ScrollViewer { Content = table, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        return panel;
+    }
+
     private UIElement DebtDetail(Debt debt)
     {
         var doc=session.Document;var totals=doc.DebtAmounts(debt.Id);var state=doc.DebtState(debt.Id);var panel=Ui.Stack();
         var heading=new DockPanel();var status=Theme.Label(DebtService.StatusName(state)+(doc.DebtOverdue(debt.Id)?" · Overdue":""),12,doc.DebtOverdue(debt.Id)?Theme.Error:Theme.Muted);DockPanel.SetDock(status,Dock.Right);heading.Children.Add(status);heading.Children.Add(Theme.Label(debt.Name,22,bold:true));panel.Children.Add(heading);
+        if (debt.GroupName is string groupName)
+        {
+            var groupLink = Theme.ActionButton("Group · " + groupName, () => { selectedDebtGroup = groupName; Render(); });
+            groupLink.HorizontalAlignment = HorizontalAlignment.Left;
+            panel.Children.Add(groupLink);
+        }
         var self=debt.Kind==DebtKind.Self;
         var info=Theme.Label((self?"Self Debt · Return to: "+doc.BankName(debt.SelfBankId!.Value):"Lender: "+debt.Lender)+"\nDue Date: "+(debt.DueDate is DateOnly due?Display.Date(due):"Not set"),13,Theme.Muted);info.Margin=new Thickness(0,8,0,16);panel.Children.Add(info);
         panel.Children.Add(Theme.Label("Remaining Principal",12,Theme.Muted));panel.Children.Add(Theme.Label(Display.Money(totals.Remaining),24,Theme.Accent));panel.Children.Add(Theme.Label((self?"Funds to Restore: ":"Borrowed: ")+Display.Money(totals.Borrowed)+"    Principal Paid: "+Display.Money(totals.Paid),13));
@@ -69,7 +155,7 @@ public sealed partial class MainWindow
     private void DebtTransaction(TransactionKind kind,Transaction? existing=null,Guid? preset=null,bool newDebt=false)
     {
         if(session.Document.Banks.Count<(kind==TransactionKind.Transfer?2:1)){ConfirmDialog.Alert(this,"Add a bank first",kind==TransactionKind.Transfer?"A transfer needs two different bank accounts. Add accounts under Data → Accounts.":"Add your account under Data → Accounts before recording a debt transaction.");return;}
-        if(new TransactionDialog(this,session,kind,existing,preset,newDebt).ShowDialog()==true){var item=existing is null?session.Document.Transactions.Last():session.Document.Transactions.Single(t=>t.Id==existing.Id);selectedDebt=session.Document.RelatedDebtIds(item).Select(id=>(Guid?)id).FirstOrDefault()??selectedDebt;selectedBank=null;page="Debt";}
+        if(new TransactionDialog(this,session,kind,existing,preset,newDebt).ShowDialog()==true){var item=existing is null?session.Document.Transactions.Last():session.Document.Transactions.Single(t=>t.Id==existing.Id);selectedDebt=session.Document.RelatedDebtIds(item).Select(id=>(Guid?)id).FirstOrDefault()??selectedDebt;selectedDebtGroup=null;selectedBank=null;page="Debt";}
         Render();
     }
     private void DebtAction(string action)
