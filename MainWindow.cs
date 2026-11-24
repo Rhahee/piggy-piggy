@@ -89,8 +89,40 @@ public sealed partial class MainWindow : Window
         status.ToolTip = hasDocument ? saveStatus : null;
         UpdateFooterSave();
     }
+    private Window? memberPopup;
+    private Window DetailOwner => memberPopup ?? this;
+
+    private void ShowMemberDetail(string title, Func<UIElement> detail, Action restoreGroup)
+    {
+        var popup = new Window { Owner = this, Title = title, ShowInTaskbar = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Width = Math.Min(820, ActualWidth), Height = Math.Min(660, ActualHeight),
+            Background = Theme.Surface, Foreground = Theme.Text, FontFamily = WorkspaceTheme.Typeface };
+        Theme.ApplyResources(popup);
+        memberPopup = popup;
+        try
+        {
+            var layout = new DockPanel { Margin = new Thickness(16) };
+            var close = Theme.ActionButton("Close", popup.Close);
+            close.IsCancel = true;
+            close.HorizontalAlignment = HorizontalAlignment.Right;
+            DockPanel.SetDock(close, Dock.Bottom);
+            layout.Children.Add(close);
+            layout.Children.Add(new ScrollViewer { Content = detail(), VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
+            popup.Content = layout;
+            popup.ShowDialog();
+        }
+        finally
+        {
+            memberPopup = null;
+            restoreGroup();
+            Render();
+        }
+    }
+
     private void Render()
     {
+        if (memberPopup is not null) { memberPopup.Close(); return; }
         CaptureWishlistViewport();
         CaptureDebtViewport();
         var theme = Theme;

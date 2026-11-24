@@ -1,6 +1,7 @@
-# Piggy 0.2.2.3 — Centang Pelunasan Debt
+# Piggy 0.2.2.4 — Detail Grup Debt dan Wishlist
 
-- Centang di kanan nama grup Debt muncul jika semua hutang dalam grup sudah berstatus **Paid**.
-- Di tabel grup, centang muncul di antara kolom **Debt** dan **Principal** untuk tiap hutang berstatus **Paid**.
+- Klik hutang, goal, atau barang yang sudah dibeli di dalam grup untuk membuka detailnya di jendela popup. Setelah ditutup, grup asal kembali terlihat.
+- Grup dan hutang individual menampilkan persentase pokok yang sudah dibayar.
+- Wishlist memakai daftar grup ringkas dan kartu ringkasan yang mengikuti tampilan Debt.
 
 Rilis ini memakai format dokumen **15**.

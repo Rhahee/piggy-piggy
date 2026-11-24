@@ -29,9 +29,9 @@ public sealed partial class MainWindow
     }
     private void EditWishlistActivityDate(WishlistEvent activity)
     {
-        var viewer=wishlistDetailScroll;
+        var viewer=memberPopup is null ? wishlistDetailScroll : null;
         double? top=viewer?.IsLoaded==true&&wishlistActivityRows.TryGetValue(activity.Id,out var row)?row.TransformToAncestor(viewer).Transform(new Point()).Y:null;
-        if(new WishlistActivityDateDialog(this,session,activity).ShowDialog()==true&&top is double y)wishlistActivityAnchor=(activity.Id,y);
+        if(new WishlistActivityDateDialog(DetailOwner,session,activity).ShowDialog()==true&&top is double y)wishlistActivityAnchor=(activity.Id,y);
         Render();
     }
     private void RestoreWishlistViewport(ScrollViewer list,ScrollViewer detail,Guid id,bool selectionChanged,FrameworkElement? selectedButton)

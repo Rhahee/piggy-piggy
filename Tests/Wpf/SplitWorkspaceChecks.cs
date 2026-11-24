@@ -73,11 +73,16 @@ internal static class SplitWorkspaceChecks
                     var groupDetail = (ScrollViewer)Field(window, "debtDetailScroll");
                     Require(Descendants<TextBlock>(groupDetail).Any(text => text.Text == Display.Money(350_000)), "Group total must include both debts.");
                     var member = Descendants<Button>(groupDetail).Single(button => Equals(button.Content, "Camera"));
+                    bool paymentAvailable = false;
+                    window.Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() => {
+                        var popup = window.OwnedWindows.Cast<Window>().Single(w => w.Title == "Camera");
+                        paymentAvailable = Descendants<Button>(popup).Any(button => Equals(button.Content, "Record Payment") && button.IsEnabled);
+                        popup.Close();
+                    }));
                     member.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     await Idle(window);
-                    Require(Equals(Field(window, "selectedDebt"), other.Id), "Clicking a group row must select the individual debt.");
-                    var memberDetail = (ScrollViewer)Field(window, "debtDetailScroll");
-                    Require(Descendants<Button>(memberDetail).Any(button => Equals(button.Content, "Record Payment") && button.IsEnabled), "Grouped debt must still support individual payment.");
+                    Require(paymentAvailable, "Grouped debt popup must support individual payment.");
+                    Require(Equals(Field(window, "selectedDebtGroup"), "Gadgets"), "Closing the popup must restore its group.");
                 }
                 Visuals<CheckBox>(window).Single(toggle => AutomationProperties.GetName(toggle) == "Dark theme").IsChecked = true;
                 await Idle(window);

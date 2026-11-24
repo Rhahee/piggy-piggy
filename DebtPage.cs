@@ -23,7 +23,7 @@ public sealed partial class MainWindow
 
     private void NewDebtGroup()
     {
-        var dialog = new FormWindow(this, "New Debt Group", "Enter a name for the new debt group.", "Create Group");
+        var dialog = new FormWindow(DetailOwner, "New Debt Group", "Enter a name for the new debt group.", "Create Group");
         var input = new TextBox { MaxLength = 100 };
         dialog.AddFields(input);
         dialog.OnSubmit(() => {
@@ -125,6 +125,7 @@ public sealed partial class MainWindow
         var summary = DebtSummary(members.Select(m => m.Totals));
         summary.Margin = new Thickness(0, 8, 0, 12);
         panel.Children.Add(summary);
+        AddRepaymentProgress(panel, members.Sum(m => m.Totals.Paid), members.Sum(m => m.Totals.Borrowed));
         var table = new Grid();
         var widths = new[] { 150, 108, 108, 108, 106 };
         foreach (var width in widths)
@@ -163,18 +164,30 @@ public sealed partial class MainWindow
         }
         Row(Theme.Label("Debt", 13, Theme.Muted, bold: true), false, "Principal", "Paid", "Remaining", "Due Date");
         foreach (var (debt, totals) in members)
-            Row(Theme.ActionButton(debt.Name, () => OpenDebt(debt)), debt.IsPaid, Display.Money(totals.Borrowed), Display.Money(totals.Paid),
+            Row(Theme.ActionButton(debt.Name, () => {
+                selectedDebt = debt.Id;
+                selectedDebtGroup = null;
+                var bank = selectedBank;
+                ShowMemberDetail(debt.Name, () => DebtDetail(debt), () => { selectedBank = bank; selectedDebtGroup = name; });
+            }), debt.IsPaid, Display.Money(totals.Borrowed), Display.Money(totals.Paid),
                 Display.Money(totals.Remaining), debt.DueDate is DateOnly due ? Display.Date(due) : "—");
         panel.Children.Add(new ScrollViewer { Content = table, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
         return panel;
     }
 
+    private void AddRepaymentProgress(StackPanel panel, decimal paid, decimal principal)
+    {
+        if (principal <= 0) return;
+        panel.Children.Add(WishlistProgress(paid, principal, "Debt repayment progress", new Thickness(0, 6, 0, 4)));
+        panel.Children.Add(Theme.Label($"{paid / principal:P0} repaid", 12, Theme.Muted));
+    }
+
     private UIElement DebtDetail(Debt debt)
     {
         var doc=session.Document;var totals=doc.DebtAmounts(debt.Id);var state=doc.DebtState(debt.Id);var panel=Ui.Stack();
         var heading=new DockPanel();var status=Theme.Label(DebtService.StatusName(state)+(doc.DebtOverdue(debt.Id)?" · Overdue":""),12,doc.DebtOverdue(debt.Id)?Theme.Error:Theme.Muted);DockPanel.SetDock(status,Dock.Right);heading.Children.Add(status);heading.Children.Add(Theme.Label(debt.Name,22,bold:true));panel.Children.Add(heading);
-        if (debt.GroupName is string groupName)
+        if (memberPopup is null && debt.GroupName is string groupName)
         {
             var groupLink = Theme.ActionButton("Group · " + groupName, () => { selectedDebtGroup = groupName; Render(); });
             groupLink.HorizontalAlignment = HorizontalAlignment.Left;
@@ -184,6 +197,7 @@ public sealed partial class MainWindow
         var info=Theme.Label((self?"Self Debt · Return to: "+doc.BankName(debt.SelfBankId!.Value):"Lender: "+debt.Lender)+"\nDue Date: "+(debt.DueDate is DateOnly due?Display.Date(due):"Not set"),13,Theme.Muted);info.Margin=new Thickness(0,8,0,16);panel.Children.Add(info);
         panel.Children.Add(Theme.Label("Remaining Principal",12,Theme.Muted));panel.Children.Add(Theme.Label(Display.Money(totals.Remaining),24,Theme.Accent));panel.Children.Add(Theme.Label((self?"Funds to Restore: ":"Borrowed: ")+Display.Money(totals.Borrowed)+"    Principal Paid: "+Display.Money(totals.Paid),13));
         var actions=new WrapPanel{Margin=new Thickness(0,16,0,8)};
+        AddRepaymentProgress(panel, totals.Paid, totals.Borrowed);
         void Add(string label,string action,bool enabled=true,bool primary=false){var button=Theme.ActionButton(label,()=>DebtAction(action),primary);button.IsEnabled=enabled;button.Margin=new Thickness(0,0,4,4);actions.Children.Add(button);}
         Add(self?"Add Debt":"Add Borrowing","borrow",!debt.IsPaid);Add("Record Payment","payment",!debt.IsPaid&&totals.Remaining>0,true);Add("Edit Details","edit");
         if(debt.IsPaid)Add("Reopen Debt","reopen");else Add("Mark as Paid","paid",totals.Remaining==0);
@@ -206,26 +220,26 @@ public sealed partial class MainWindow
     }
     private void DebtTransaction(TransactionKind kind,Transaction? existing=null,Guid? preset=null,bool newDebt=false)
     {
-        if(session.Document.Banks.Count<(kind==TransactionKind.Transfer?2:1)){ConfirmDialog.Alert(this,"Add a bank first",kind==TransactionKind.Transfer?"A transfer needs two different bank accounts. Add accounts under Data → Accounts.":"Add your account under Data → Accounts before recording a debt transaction.");return;}
-        if(new TransactionDialog(this,session,kind,existing,preset,newDebt).ShowDialog()==true){var item=existing is null?session.Document.Transactions.Last():session.Document.Transactions.Single(t=>t.Id==existing.Id);selectedDebt=session.Document.RelatedDebtIds(item).Select(id=>(Guid?)id).FirstOrDefault()??selectedDebt;selectedDebtGroup=null;selectedBank=null;page="Debt";}
+        if(session.Document.Banks.Count<(kind==TransactionKind.Transfer?2:1)){ConfirmDialog.Alert(DetailOwner,"Add a bank first",kind==TransactionKind.Transfer?"A transfer needs two different bank accounts. Add accounts under Data → Accounts.":"Add your account under Data → Accounts before recording a debt transaction.");return;}
+        if(new TransactionDialog(DetailOwner,session,kind,existing,preset,newDebt).ShowDialog()==true){var item=existing is null?session.Document.Transactions.Last():session.Document.Transactions.Single(t=>t.Id==existing.Id);selectedDebt=session.Document.RelatedDebtIds(item).Select(id=>(Guid?)id).FirstOrDefault()??selectedDebt;selectedDebtGroup=null;selectedBank=null;page="Debt";}
         Render();
     }
     private void DebtAction(string action)
     {
         try{
             if(action=="new"){
-                var dialog=new FormWindow(this,"New Debt","Start Self Debt from an Expense or Transfer, or record Income from a lender.","Continue");var type=new ComboBox{ItemsSource=new[]{"Self Debt from Expense","Self Debt from Transfer","Debt to a lender"},SelectedIndex=0};dialog.AddFields(type);dialog.OnSubmit(()=>{});
+                var dialog=new FormWindow(DetailOwner,"New Debt","Start Self Debt from an Expense or Transfer, or record Income from a lender.","Continue");var type=new ComboBox{ItemsSource=new[]{"Self Debt from Expense","Self Debt from Transfer","Debt to a lender"},SelectedIndex=0};dialog.AddFields(type);dialog.OnSubmit(()=>{});
                 if(dialog.ShowDialog()==true)DebtTransaction(type.SelectedIndex switch{0=>TransactionKind.Expense,1=>TransactionKind.Transfer,_=>TransactionKind.Income},newDebt:true);return;
             }var debt=ActiveDebt;if(debt is null)return;
-            if(action=="edit"){new DebtDetailsDialog(this,session,debt).ShowDialog();Render();return;}
+            if(action=="edit"){new DebtDetailsDialog(DetailOwner,session,debt).ShowDialog();Render();return;}
             if(action is "borrow" or "payment"){
                 FinanceDocument.Require(!debt.IsPaid,"Reopen Debt before adding a transaction.");
                 if(debt.Kind==DebtKind.Self&&action=="borrow"){
-                    var dialog=new FormWindow(this,"Add Self Debt","Use the original account for an Expense or a borrowing Transfer.","Continue");var type=new ComboBox{ItemsSource=session.Document.Banks.Count>1?new[]{"Expense from original account","Transfer from original account"}:new[]{"Expense from original account"},SelectedIndex=0};dialog.AddFields(type);dialog.OnSubmit(()=>{});
+                    var dialog=new FormWindow(DetailOwner,"Add Self Debt","Use the original account for an Expense or a borrowing Transfer.","Continue");var type=new ComboBox{ItemsSource=session.Document.Banks.Count>1?new[]{"Expense from original account","Transfer from original account"}:new[]{"Expense from original account"},SelectedIndex=0};dialog.AddFields(type);dialog.OnSubmit(()=>{});
                     if(dialog.ShowDialog()==true)DebtTransaction(type.SelectedIndex==0?TransactionKind.Expense:TransactionKind.Transfer,preset:debt.Id,newDebt:type.SelectedIndex==1);return;
                 }
                 if(debt.Kind==DebtKind.Self&&action=="payment"){
-                    var dialog=new FormWindow(this,"Repay Self Debt","Mark Income received in the original account, or link a transfer Purpose allocation. No extra bank transaction is created by tracking.","Continue");
+                    var dialog=new FormWindow(DetailOwner,"Repay Self Debt","Mark Income received in the original account, or link a transfer Purpose allocation. No extra bank transaction is created by tracking.","Continue");
                     var type=new ComboBox{ItemsSource=session.Document.Banks.Count>1?new[]{"Income to original account","Transfer to original account"}:new[]{"Income to original account"},SelectedIndex=0};dialog.AddFields(type);dialog.OnSubmit(()=>{});
                     if(dialog.ShowDialog()==true)DebtTransaction(type.SelectedIndex==0?TransactionKind.Income:TransactionKind.Transfer,preset:debt.Id);return;
                 }
@@ -235,8 +249,8 @@ public sealed partial class MainWindow
                 "paid"=>("Mark as Paid?","Confirm that "+debt.Name+" is fully settled? No bank transaction will be created.","Mark as Paid"),
                 "reopen"=>("Reopen Debt?","Reopen "+debt.Name+" for additional borrowing or record corrections? Existing transactions are retained.","Reopen Debt"),
                 _=>("Remove Debt Tracking?","Remove "+debt.Name+" and detach all of its debt links? All bank transactions, dates, amounts, categories and fees will be retained.","Remove Tracking")};
-            if(!ConfirmDialog.Confirm(this,title,message,button))return;
+            if(!ConfirmDialog.Confirm(DetailOwner,title,message,button))return;
             session.Apply(action=="remove"?DebtService.RemoveTracking(session.Document,debt.Id):DebtService.SetPaid(session.Document,debt.Id,action=="paid"));Render();
-        }catch(InvalidDataException e){ConfirmDialog.Alert(this,"Debt",e.Message);Render();}
+        }catch(InvalidDataException e){ConfirmDialog.Alert(DetailOwner,"Debt",e.Message);Render();}
     }
 }
