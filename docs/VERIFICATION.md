@@ -1,4 +1,10 @@
-# Verification — 0.2.2.2
+# Verification — 0.2.2.3
+
+## Paid debt indicators
+
+[Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/45505698117) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/45505950417) passed for commit `cc4dda7`. WPF checks covered the individual paid indicator, an entirely paid group, and an empty group. Package staging verified the ZIP checksum and executable source version. A format 15 fixture with 125 transactions reopened with equivalent data and its source hash was preserved.
+
+The public update channel offered 0.2.2.3 to versions 0.1.1.3 and 0.2.2.2 and reported 0.2.2.3 as up to date. The web installer resolved 0.2.2.3.
 
 ## Grouping purchased items and settled debts
 
@@ -20,7 +26,7 @@ After channel promotion, the live updater offered 0.2.2.0 to clients reporting 0
 
 ## Baseline scope
 
-The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.2.2.2**, update epoch **3**, and document format **15**.
+The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.2.2.3**, update epoch **3**, and document format **15**.
 
 ## Automated checks
 
