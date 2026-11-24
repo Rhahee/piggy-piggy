@@ -59,11 +59,24 @@ public sealed partial class MainWindow
         var split=new Grid{Margin=new Thickness(12)};split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(248),MinWidth=184});split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(12)});split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star),MinWidth=380});
         Ui.ConstrainSplitList(root,split);
         var list=Ui.Stack();FrameworkElement? selectedButton=null;
+        var unpaidGroups = doc.Debts.Where(d => !d.IsPaid).Select(d => d.GroupName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var populatedGroups = doc.Debts.Select(d => d.GroupName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var groupName in VisibleDebtGroups(debts).OrderBy(name => name))
         {
             var button = Theme.ActionButton(groupName, () => { selectedDebtGroup = groupName; Render(); });
             button.HorizontalContentAlignment = HorizontalAlignment.Left;
             Theme.StyleButton(button, selected: SameDebtGroup(selectedDebtGroup, groupName));
+            if (populatedGroups.Contains(groupName) && !unpaidGroups.Contains(groupName))
+            {
+                var row = new DockPanel();
+                var check = new TextBlock { Text = "✓", Margin = new Thickness(8, 0, 0, 0), ToolTip = "All debts paid" };
+                DockPanel.SetDock(check, Dock.Right);
+                row.Children.Add(check);
+                row.Children.Add(new TextBlock { Text = groupName, TextTrimming = TextTrimming.CharacterEllipsis });
+                button.Content = row;
+                button.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+                System.Windows.Automation.AutomationProperties.SetName(button, groupName + " · All debts paid");
+            }
             list.Children.Add(button);
         }
         foreach(var debt in debts.Where(d => d.GroupName is null)){
@@ -112,34 +125,45 @@ public sealed partial class MainWindow
         var summary = DebtSummary(members.Select(m => m.Totals));
         summary.Margin = new Thickness(0, 8, 0, 12);
         panel.Children.Add(summary);
-        var table = new Grid { MinWidth = 580 };
+        var table = new Grid();
         var widths = new[] { 150, 108, 108, 108, 106 };
         foreach (var width in widths)
             table.ColumnDefinitions.Add(new ColumnDefinition { MinWidth = width, Width = new GridLength(1, GridUnitType.Star) });
-        void Row(FrameworkElement debt, params string[] values)
+        table.ColumnDefinitions.Insert(1, new ColumnDefinition { Width = new GridLength(32) });
+        void Row(FrameworkElement debt, bool paid, params string[] values)
         {
             var index = table.RowDefinitions.Count;
             table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             var rule = new Border { BorderBrush = Theme.Rule, BorderThickness = new Thickness(0, 0, 0, 1) };
             Grid.SetRow(rule, index);
-            Grid.SetColumnSpan(rule, widths.Length);
+            Grid.SetColumnSpan(rule, table.ColumnDefinitions.Count);
             table.Children.Add(rule);
             Grid.SetRow(debt, index);
             debt.Margin = new Thickness(8, 6, 8, 6);
             table.Children.Add(debt);
+            if (paid)
+            {
+                var check = Theme.Label("✓", 14);
+                check.HorizontalAlignment = HorizontalAlignment.Center;
+                check.ToolTip = "Debt paid";
+                System.Windows.Automation.AutomationProperties.SetName(check, "Debt paid");
+                Grid.SetRow(check, index);
+                Grid.SetColumn(check, 1);
+                table.Children.Add(check);
+            }
             for (var i = 0; i < values.Length; i++)
             {
                 var label = Theme.Label(values[i], 13, index == 0 ? Theme.Muted : Theme.Text, bold: index == 0);
                 label.TextAlignment = i < 3 ? TextAlignment.Right : TextAlignment.Center;
                 label.Margin = new Thickness(8, 6, 8, 6);
                 Grid.SetRow(label, index);
-                Grid.SetColumn(label, i + 1);
+                Grid.SetColumn(label, i + 2);
                 table.Children.Add(label);
             }
         }
-        Row(Theme.Label("Debt", 13, Theme.Muted, bold: true), "Principal", "Paid", "Remaining", "Due Date");
+        Row(Theme.Label("Debt", 13, Theme.Muted, bold: true), false, "Principal", "Paid", "Remaining", "Due Date");
         foreach (var (debt, totals) in members)
-            Row(Theme.ActionButton(debt.Name, () => OpenDebt(debt)), Display.Money(totals.Borrowed), Display.Money(totals.Paid),
+            Row(Theme.ActionButton(debt.Name, () => OpenDebt(debt)), debt.IsPaid, Display.Money(totals.Borrowed), Display.Money(totals.Paid),
                 Display.Money(totals.Remaining), debt.DueDate is DateOnly due ? Display.Date(due) : "—");
         panel.Children.Add(new ScrollViewer { Content = table, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });

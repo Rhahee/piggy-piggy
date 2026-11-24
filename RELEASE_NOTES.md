@@ -1,6 +1,6 @@
-# Piggy 0.2.2.2 — Pindah ke Grup
+# Piggy 0.2.2.3 — Centang Pelunasan Debt
 
-- Pilih **Move to Wishlist Group** untuk memasukkan wishlist berstatus Purchased atau Closed ke grup. Harga aktual, tanggal, dan riwayat pembelian bisa dilihat dari grup tujuan. **Total purchases** menjumlahkan harga pembelian yang masih berlaku.
-- Pilih **Move to Debt Group** untuk memindahkan hutang ke grup lain, termasuk hutang yang sudah lunas. Riwayat cicilan tetap terhubung ke hutang asal.
+- Centang di kanan nama grup Debt muncul jika semua hutang dalam grup sudah berstatus **Paid**.
+- Di tabel grup, centang muncul di antara kolom **Debt** dan **Principal** untuk tiap hutang berstatus **Paid**.
 
-Dokumen lama dapat dibuka. Saat disimpan, dokumen memakai format **15**. Simpan salinan lama jika masih perlu membukanya di Piggy 0.2.2.1.
+Rilis ini memakai format dokumen **15**.

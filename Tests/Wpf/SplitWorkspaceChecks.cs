@@ -36,6 +36,14 @@ internal static class SplitWorkspaceChecks
         document = DebtService.SaveTransaction(document, new(Guid.NewGuid(), new(2026, 10, 1), TransactionKind.Income, bank.Id, null, category.Id, 100_000, 0, null, "", DebtId: debt.Id), debt);
         var other = debt with { Id = Guid.NewGuid(), Name = "Camera", GroupName = "gadgets" };
         document = DebtService.SaveTransaction(document, new(Guid.NewGuid(), new(2026, 10, 1), TransactionKind.Income, bank.Id, null, category.Id, 250_000, 0, null, "", DebtId: other.Id), other);
+        var repaymentCategory = new Category(Guid.NewGuid(), "Fictional Repayment", CategoryKind.Expense);
+        document.Categories.Add(repaymentCategory);
+        var settled = debt with { Id = Guid.NewGuid(), Name = "Settled Loan", GroupName = "Settled Group" };
+        var date = new DateOnly(2026, 10, 1);
+        document = DebtService.SaveTransaction(document, new(Guid.NewGuid(), date, TransactionKind.Income, bank.Id, null, category.Id, 50_000, 0, null, "", DebtId: settled.Id), settled);
+        document = DebtService.SaveTransaction(document, new(Guid.NewGuid(), date, TransactionKind.Expense, bank.Id, null, repaymentCategory.Id, 50_000, 0, null, "", DebtId: settled.Id));
+        document = DebtService.SetPaid(document, settled.Id, true);
+        document.DebtGroups.Add("Empty Group");
         var session = new DocumentSession(); session.Apply(document); session.Save(file);
         var original = System.IO.File.ReadAllBytes(file);
         var window = new MainWindow { Width = 1500, Height = 800, ShowInTaskbar = false };
@@ -51,6 +59,15 @@ internal static class SplitWorkspaceChecks
                 {
                     var list = (ScrollViewer)Field(window, "debtListScroll");
                     var group = Descendants<Button>(list).Single(button => Equals(button.Content, "Gadgets"));
+                    var settledGroup = Descendants<Button>(list).Single(button => AutomationProperties.GetName(button) == "Settled Group · All debts paid");
+                    Require(Descendants<TextBlock>(settledGroup).Any(text => text.Text == "✓" && DockPanel.GetDock(text) == Dock.Right), "A fully paid group must show a check at the right.");
+                    Require(Descendants<Button>(list).Any(button => Equals(button.Content, "Empty Group")), "An empty group must not show a paid check.");
+                    settledGroup.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    await Idle(window);
+                    var settledDetail = (ScrollViewer)Field(window, "debtDetailScroll");
+                    Require(Descendants<TextBlock>(settledDetail).Any(text => text.Text == "✓" && Grid.GetColumn(text) == 1), "A paid debt must show a check before Principal.");
+                    list = (ScrollViewer)Field(window, "debtListScroll");
+                    group = Descendants<Button>(list).Single(button => Equals(button.Content, "Gadgets"));
                     group.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     await Idle(window);
                     var groupDetail = (ScrollViewer)Field(window, "debtDetailScroll");
