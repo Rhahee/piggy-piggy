@@ -37,7 +37,7 @@ public sealed partial class MainWindow
         var doc=session.Document;var outer=new DockPanel{Background=Theme.Background};
         var items=doc.Wishlists.Where(w=>selectedBank is null||doc.WishlistAllocated(w.Id,selectedBank)>0).ToList();
         if(!items.Any(w=>w.Id==selectedWishlist))selectedWishlist=items.FirstOrDefault()?.Id;
-        var header=Theme.SectionHeader("Wishlist","New Wishlist",()=>WishlistAction("new"));DockPanel.SetDock(header,Dock.Top);outer.Children.Add(header);
+        var header=Theme.SectionHeader("Wishlist","New Wishlist",()=>WishlistAction("new"), trailingAction: Theme.ActionButton("New Wishlist Group", () => WishlistAction("newGroup")));DockPanel.SetDock(header,Dock.Top);outer.Children.Add(header);
         var summary=WishlistSummary(doc.Banks.Where(b=>selectedBank is null||b.Id==selectedBank));DockPanel.SetDock(summary,Dock.Top);outer.Children.Add(summary);
         if(items.Count==0){var empty=Ui.Stack();empty.Children.Add(Theme.Label(doc.Wishlists.Count==0?"Plan your next purchase":"No allocations in this account",20,bold:true));var note=Theme.Label(doc.Wishlists.Count==0?"Create a wishlist now. Allocate funds from your accounts whenever you are ready.":"Choose All accounts to see wishlists without allocations or funded by other banks.",14,Theme.Muted);note.Margin=new Thickness(0,12,0,0);empty.Children.Add(note);var card=Theme.Card(empty,new Thickness(20));card.VerticalAlignment=VerticalAlignment.Top;card.Margin=new Thickness(12);outer.Children.Add(card);return outer;}
         var selectionChanged=renderedWishlist!=selectedWishlist;renderedWishlist=selectedWishlist;
@@ -207,8 +207,8 @@ public sealed partial class MainWindow
     private void WishlistAction(string action, WishlistEvent? purchase = null)
     {
         try{
-            if(action=="new"){
-                var dialog=new WishlistDetailsDialog(this,session);if(dialog.ShowDialog()==true){selectedWishlist=dialog.ResultId;selectedBank=null;page="Wishlist";}Render();return;
+            if(action is "new" or "newGroup"){
+                var dialog=new WishlistDetailsDialog(this,session,newGroup: action=="newGroup");if(dialog.ShowDialog()==true){selectedWishlist=dialog.ResultId;selectedBank=null;page="Wishlist";}Render();return;
             }
             var w=ActiveWishlist;if(w is null)return;
             if(action=="edit"){new WishlistDetailsDialog(this,session,w).ShowDialog();Render();return;}

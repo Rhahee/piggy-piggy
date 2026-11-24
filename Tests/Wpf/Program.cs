@@ -85,12 +85,13 @@ internal static class Program
                 form.ShowDialog(); Equal(true, accepted);
             }
             FormWindow Dialog(string name, params object?[] args) => (FormWindow)Activator.CreateInstance(typeof(MainWindow).Assembly.GetType("MyPiggyBank." + name, true)!, args)!;
-            var create = Dialog("WishlistDetailsDialog", owner, session, null);
+            var create = Dialog("WishlistDetailsDialog", owner, session, null, true);
             SubmitForm(create, () => {
-                Desc<ComboBox>(create).Single(c => c.Items.Contains("Shared Budget")).SelectedItem = "Shared Budget";
+                Equal("New Wishlist Group — Piggy", create.Title);
                 Desc<TextBox>(create).Single(t => t.MaxLength == 100).Text = "Tech Budget";
             });
             var budget = session.Document.Wishlists.Single();
+            Equal(0, budget.Goals!.Count());
             var add = Dialog("WishlistGoalDialog", owner, session, budget, null);
             SubmitForm(add, () => Desc<TextBox>(add).Single(t => t.MaxLength == 100).Text = "Spare parts");
             budget = session.Document.Wishlists.Single();

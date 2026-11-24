@@ -107,10 +107,11 @@ public sealed partial class MainWindow : Window
         if (page == "Debt")
         {
             var visible = VisibleDebts();
-            if (selectedDebtGroup is not null && !visible.Any(d => SameDebtGroup(d.GroupName, selectedDebtGroup)))
+            if (selectedDebtGroup is not null && !VisibleDebtGroups(visible).Contains(selectedDebtGroup, StringComparer.OrdinalIgnoreCase))
                 selectedDebtGroup = null;
             if (selectedDebtGroup is null && !visible.Any(d => d.Id == selectedDebt))
                 selectedDebt = visible.FirstOrDefault()?.Id;
+            if (selectedDebtGroup is null && selectedDebt is null) selectedDebtGroup = VisibleDebtGroups(visible).FirstOrDefault();
         }
         var layout = new DockPanel();
         theme.ApplyTo(layout);

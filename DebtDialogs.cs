@@ -101,8 +101,7 @@ internal sealed class DebtDetailsDialog : FormWindow
         var name=new TextBox{Text=debt.Name,MaxLength=100};var lender=new TextBox{Text=debt.Lender,MaxLength=100};var due=DateInput(debt.DueDate??DateOnly.FromDateTime(DateTime.Today));if(debt.DueDate is null)due.Text="";
         Field("Debt Name *",name);if(debt.Kind==DebtKind.External)Field("Lender *",lender);else Field("Return to",Theme.Label(session.Document.BankName(debt.SelfBankId!.Value)));DateField("Due Date",due);
         var group = new ComboBox { IsEditable = true, IsTextSearchEnabled = false,
-            ItemsSource = session.Document.Debts.Select(d => d.GroupName).OfType<string>()
-                .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(value => value).ToArray(),
+            ItemsSource = session.Document.GroupNames().OrderBy(value => value).ToArray(),
             Text = debt.GroupName ?? "" };
         Field("Debt Group", group);
         AddFields(Theme.Label("Select or type a group name. Leave blank to remove this debt from its group.", 12, Theme.Muted));

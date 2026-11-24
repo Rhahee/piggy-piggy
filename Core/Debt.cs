@@ -9,6 +9,8 @@ public sealed record DebtEntry(Transaction Item,bool AddsPrincipal,decimal Amoun
 
 public sealed partial class FinanceDocument
 {
+    public List<string> DebtGroups { get; set; } = [];
+    public IEnumerable<string> GroupNames() => DebtGroups.Union(Debts.Select(d => d.GroupName).OfType<string>(), StringComparer.OrdinalIgnoreCase);
     public List<Debt> Debts { get; set; }=[];
     public string DebtLabel(Guid? id)
     {
@@ -47,6 +49,9 @@ public sealed partial class FinanceDocument
     public bool DebtOverdue(Guid id) => Debts.First(d=>d.Id==id).DueDate is DateOnly due&&due<DateOnly.FromDateTime(DateTime.Today)&&DebtAmounts(id).Remaining>0;
     private void ValidateDebts()
     {
+        Require(DebtGroups is not null && (Version >= 14 || DebtGroups.Count == 0)
+            && DebtGroups.All(name => name is { Length: > 0 and <= 100 } && name == name.Trim())
+            && DebtGroups.Distinct(StringComparer.OrdinalIgnoreCase).Count() == DebtGroups.Count, "Invalid debt groups.");
         Require(Debts is not null&&Debts.All(d=>d is not null),"The debt list is incomplete.");
         Require(Version>=7||(Debts.Count==0&&Transactions.All(t=>t.DebtId is null)),"Debt tracking requires document format 7.");
         Require(Version>=8||(Debts.All(d=>d.Kind==DebtKind.External&&d.SelfBankId is null)&&Transactions.All(t=>t.SelfDebtPayment is null&&(t.Allocations??[]).All(a=>a.SelfDebtId is null))),"Self Debt requires document format 8.");

@@ -8,7 +8,7 @@ namespace MyPiggyBank;
 internal sealed class WishlistDetailsDialog : FormWindow
 {
     public Guid ResultId { get; private set; }
-    public WishlistDetailsDialog(Window owner,DocumentSession session,WishlistItem? existing=null) : base(owner,existing is null?"New Wishlist":"Edit Wishlist","Fields marked * are required. Allocate funds whenever you are ready.",existing is null?"Create Wishlist":"Save Changes",560)
+    public WishlistDetailsDialog(Window owner,DocumentSession session,WishlistItem? existing=null, bool newGroup=false) : base(owner,newGroup?"New Wishlist Group":existing is null?"New Wishlist":"Edit Wishlist","Fields marked * are required. Allocate funds whenever you are ready.",newGroup?"Create Group":existing is null?"Create Wishlist":"Save Changes",560)
     {
         var name=new TextBox{Text=existing?.Name??"",MaxLength=100}; var target=MoneyInput(existing?.TargetAmount??0);
         var date=DateInput(existing?.TargetDate??DateOnly.FromDateTime(DateTime.Today)); if(existing?.TargetDate is null)date.Text="";
@@ -17,8 +17,8 @@ internal sealed class WishlistDetailsDialog : FormWindow
         var updateDate=DateInput(existing is null?DateOnly.FromDateTime(DateTime.Today):session.Document.WishlistEvents.Where(e=>e.WishlistId==existing.Id).Max(e=>e.Date));
         var priority=new ComboBox{ItemsSource=Enum.GetValues<WishlistPriority>(),SelectedItem=existing?.Priority??WishlistPriority.Normal};
         var notes=new TextBox{Text=existing?.Notes??"",MaxLength=2000,Height=70,TextWrapping=TextWrapping.Wrap,AcceptsReturn=true};
-        var type = new ComboBox { ItemsSource = new[] { "Single Item", "Shared Budget" }, SelectedIndex = existing?.Goals is null ? 0 : 1, IsEnabled = existing?.Goals is null && (existing is null || session.Document.WishlistState(existing.Id) == WishlistStatus.Planned) };
-        Field("Wishlist type", type);
+        var type = new ComboBox { ItemsSource = new[] { "Single Item", "Shared Budget" }, SelectedIndex = newGroup || existing?.Goals is not null ? 1 : 0, IsEnabled = existing?.Goals is null && (existing is null || session.Document.WishlistState(existing.Id) == WishlistStatus.Planned) };
+        if (!newGroup) Field("Wishlist type", type);
         Field("Name *",name);DateField("Planned Date *",plannedDate);if(existing is not null)DateField("Update Date *",updateDate);Field("Target Amount\n(Rp) *",target);DateField("Target Date",date);Field("Priority",priority);Field("Notes",notes);
         var targetRow = (FrameworkElement)target.Parent;
         var conversionNote = Theme.Label(existing is null ? "" : $"First goal: {existing.Name} · {Display.Money(existing.TargetAmount)}", 13, Theme.Muted);

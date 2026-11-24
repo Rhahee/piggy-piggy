@@ -71,12 +71,15 @@ internal sealed class WorkspaceTheme
         return button;
     }
 
-    public Border SectionHeader(string title, string actionLabel, Action action, string? subtitle = null)
+    public Border SectionHeader(string title, string actionLabel, Action action, string? subtitle = null, Button? trailingAction = null)
     {
         var row = new DockPanel { Margin = new Thickness(24, 2, 24, 2) };
         var button = ActionButton(actionLabel, action, primary: true);
-        DockPanel.SetDock(button, Dock.Right);
-        row.Children.Add(button);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal };
+        actions.Children.Add(button);
+        if (trailingAction is not null) actions.Children.Add(trailingAction);
+        DockPanel.SetDock(actions, Dock.Right);
+        row.Children.Add(actions);
         var heading = Label(title, 20, bold: true);
         if (subtitle is not null)
         {

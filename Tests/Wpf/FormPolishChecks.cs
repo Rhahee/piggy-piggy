@@ -143,7 +143,7 @@ internal static class FormPolishChecks
             });
         });
         Check("zero wishlist target focuses its amount without creating wishlist",()=>{
-            var session=Session();var before=JsonSerializer.Serialize(session.Document);var form=InternalForm("WishlistDetailsDialog",owner,session,null);
+            var session=Session();var before=JsonSerializer.Serialize(session.Document);var form=InternalForm("WishlistDetailsDialog",owner,session,null,false);
             InDialog(form,()=>{Field<TextBox>(form,"Name *").Text="QA goal";Field<MoneyTextBox>(form,"Target Amount\n(Rp) *").Text="0";Submit(form);Focused(Field<TextBox>(form,"Target Amount\n(Rp) *"),form);});
             Require(before==JsonSerializer.Serialize(session.Document),"Rejected wishlist left staged data.");
         });

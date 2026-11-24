@@ -47,7 +47,7 @@ Invalid("income cannot have destination",d => d.Transactions[0] = Income() with 
 Invalid("unknown bank rejected",d => d.Transactions[0] = Income() with { BankId = Guid.NewGuid() });
 Invalid("unknown enum rejected",d => d.Transactions[0] = Income() with { Kind = (TransactionKind)100 });
 Invalid("duplicate transaction ID rejected",d => d.Transactions.Add(d.Transactions[0]));
-Invalid("unsupported version rejected",d => d.Version = 14);
+Invalid("unsupported version rejected",d => d.Version = 15);
 Invalid("wrong format marker rejected",d => d.Format = "OtherApp");
 Test("optional description may be blank",() => { var d = Complete(); d.Transactions[0] = Income() with { Description = "" }; d.Validate(); });
 Test("category names can be reused across different types",() => { var d = Empty(); d.Categories.Add(new(Guid.NewGuid(),"Salary",CategoryKind.Expense)); d.Validate(); });
@@ -524,12 +524,14 @@ try
         var first = session.Document.Debts.Single();
         Equal<string?>(null, first.GroupName);
         var grouped = DebtService.EditDetails(session.Document, first.Id, first.Name, first.Lender, first.DueDate, " Gadgets ");
+        grouped.DebtGroups.Add("Future expenses");
         var second = first with { Id = Guid.NewGuid(), Name = "Camera", GroupName = "Gadgets" };
         grouped = DebtService.SaveTransaction(grouped, BorrowTx(500_000) with { Id = Guid.NewGuid(), DebtId = second.Id, Fee = 0 }, second);
         var payment = Expense() with { Date = new(2026,10,21), Amount = 200_000, Fee = 0, BankId = bankA.Id, DebtId = first.Id };
         session.Apply(DebtService.SaveTransaction(grouped, payment));
         session.Save(file);
         session.Open(file);
+        Equal(true, session.Document.GroupNames().Contains("Future expenses"));
         Equal(true, session.Document.Debts.All(d => d.GroupName == "Gadgets"));
         Equal(new DebtTotals(1_000_000, 200_000), session.Document.DebtAmounts(first.Id));
         Equal(new DebtTotals(500_000, 0), session.Document.DebtAmounts(second.Id));
