@@ -1,12 +1,18 @@
-# Verification — 0.2.1.2
+# Verification — 0.2.2.0
+
+## Debt Groups release
+
+Main CI run [45496526374](https://github.com/Rhahee/piggy-piggy/actions/runs/45496526374) and tag CI run [45496920766](https://github.com/Rhahee/piggy-piggy/actions/runs/45496920766) passed for commit `ba71f54`. Package staging verified the ZIP checksum and executable source version. A format 12 fixture with 125 transactions was saved separately in format 13 and reopened with equivalent data. The source fixture hash was preserved.
+
+After channel promotion, the live updater offered 0.2.2.0 to clients reporting 0.1.1.3 and 0.2.1.2. A client reporting 0.2.2.0 returned UpToDate. The web installer resolved 0.2.2.0. Full installation and restart were not exercised in this check.
 
 ## Baseline scope
 
-The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.2.1.2**, update epoch **3**, and document format **12**.
+The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.2.2.0**, update epoch **3**, and document format **13**.
 
 ## Automated checks
 
-The current suite contains **458 core checks** and **55 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, legacy document compatibility, Wishlist/Debt links, Shared Budget allocations and purchase-date corrections, reservations, debt repayments and corrections, persistent report periods, accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering. WPF cases also cover theme resources, calendar navigation, Overview account filtering, validation focus, scrolling, cancellation without staged data, and blank opening balances.
+The current suite contains **459 core checks** and **55 isolated WPF checks**. Coverage includes accounting and historical balances, required categories, both fee bases, manual Save/Open, legacy document compatibility, Wishlist/Debt links, Shared Budget allocations and purchase-date corrections, reservations, debt repayments and corrections, persistent report periods, accessible ledger icons, ellipsis/tooltips, flexible numeric searches, updater refresh/retry and channel ordering. WPF cases also cover theme resources, calendar navigation, Overview account filtering, validation focus, scrolling, cancellation without staged data, and blank opening balances.
 
 The WPF checks instantiate production controls in an isolated STA process. They check behavior and measurement, not rendered pixels. Update HTTP cases use simulated responses unless a live check is explicitly recorded.
 
