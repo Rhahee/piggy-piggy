@@ -101,7 +101,7 @@ public sealed partial class MainWindow : Window
         UpdateTitle(); ledger = null; editButton = null; deleteButton = null; searchBox = null;
         if (!hasDocument) { body.Content = StartPage(theme); return; }
         if(page=="Wishlist"){
-            var visible=session.Document.Wishlists.Where(w=>selectedBank is null||session.Document.WishlistAllocated(w.Id,selectedBank)>0).ToList();
+            var visible=VisibleWishlistItems();
             if(!visible.Any(w=>w.Id==selectedWishlist))selectedWishlist=visible.FirstOrDefault()?.Id;
         }
         if (page == "Debt")

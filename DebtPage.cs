@@ -163,6 +163,13 @@ public sealed partial class MainWindow
         void Add(string label,string action,bool enabled=true,bool primary=false){var button=Theme.ActionButton(label,()=>DebtAction(action),primary);button.IsEnabled=enabled;button.Margin=new Thickness(0,0,4,4);actions.Children.Add(button);}
         Add(self?"Add Debt":"Add Borrowing","borrow",!debt.IsPaid);Add("Record Payment","payment",!debt.IsPaid&&totals.Remaining>0,true);Add("Edit Details","edit");
         if(debt.IsPaid)Add("Reopen Debt","reopen");else Add("Mark as Paid","paid",totals.Remaining==0);
+        var groups = doc.GroupNames().Where(name => !SameDebtGroup(name, debt.GroupName)).OrderBy(name => name).ToArray();
+        var move = Theme.ActionButton("Move to Debt Group", () => PickGroup("Move to Debt Group", groups, "", group => {
+            session.Apply(DebtService.EditDetails(doc, debt.Id, debt.Name, debt.Lender, debt.DueDate, group));
+            selectedDebtGroup = group;
+        }));
+        move.IsEnabled = groups.Length > 0;
+        actions.Children.Add(move);
         panel.Children.Add(actions);if(state==DebtStatus.PendingConfirmation)panel.Children.Add(Theme.Label("No principal remains. Select Mark as Paid to confirm settlement.",12,Theme.Muted));if(debt.IsPaid)panel.Children.Add(Theme.Label("Reopen this debt before adding borrowing or changing records that leave principal outstanding.",12,Theme.Muted));
         var title=Theme.Label("Transaction History",16,bold:true);title.Margin=new Thickness(0,20,0,8);panel.Children.Add(title);
         foreach(var entry in doc.DebtEntries(debt.Id).OrderByDescending(e=>e.Item.Date).ThenByDescending(e=>doc.Transactions.IndexOf(e.Item))){

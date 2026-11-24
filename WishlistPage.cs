@@ -32,10 +32,27 @@ public sealed partial class MainWindow
         return bar;
     }
 
+    private List<WishlistItem> VisibleWishlistItems()
+    {
+        var doc = session.Document;
+        var visible = doc.Wishlists.Where(w => selectedBank is null || doc.WishlistAllocated(w.Id, selectedBank) > 0).ToArray();
+        var ids = visible.Select(w => w.Id).Concat(visible.Select(w => w.ParentGroupId).OfType<Guid>()).ToHashSet();
+        return doc.Wishlists.Where(w => ids.Contains(w.Id)).OrderBy(w => w.ParentGroupId.HasValue).ToList();
+    }
+
+    private void PickGroup<T>(string title, T[] groups, string displayPath, Action<T> move)
+    {
+        var dialog = new FormWindow(this, title, "Choose the destination group.", "Move");
+        var picker = new ComboBox { ItemsSource = groups, DisplayMemberPath = displayPath, SelectedIndex = 0 };
+        dialog.AddFields(picker);
+        dialog.OnSubmit(() => { if (picker.SelectedItem is T group) move(group); });
+        if (dialog.ShowDialog() == true) Render();
+    }
+
     private UIElement WishlistPage()
     {
         var doc=session.Document;var outer=new DockPanel{Background=Theme.Background};
-        var items=doc.Wishlists.Where(w=>selectedBank is null||doc.WishlistAllocated(w.Id,selectedBank)>0).ToList();
+        var items=VisibleWishlistItems();
         if(!items.Any(w=>w.Id==selectedWishlist))selectedWishlist=items.FirstOrDefault()?.Id;
         var header=Theme.SectionHeader("Wishlist","New Wishlist",()=>WishlistAction("new"), trailingAction: Theme.ActionButton("New Wishlist Group", () => WishlistAction("newGroup")));DockPanel.SetDock(header,Dock.Top);outer.Children.Add(header);
         var summary=WishlistSummary(doc.Banks.Where(b=>selectedBank is null||b.Id==selectedBank));DockPanel.SetDock(summary,Dock.Top);outer.Children.Add(summary);
@@ -44,7 +61,7 @@ public sealed partial class MainWindow
         var split=new Grid{Margin=new Thickness(12)};wishlistSplit=split;split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(wishlistLeftWidth),MinWidth=180});split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(12)});split.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(1,GridUnitType.Star),MinWidth=380});
         Ui.ConstrainSplitList(outer,split);
         var list=Ui.Stack();FrameworkElement? selectedButton=null;
-        foreach(var w in items){
+        foreach(var w in items.Where(w => w.ParentGroupId is null)){
             var body=Ui.Stack();var name=Theme.Label(w.Name,14,bold:true);name.TextWrapping=TextWrapping.NoWrap;name.TextTrimming=TextTrimming.CharacterEllipsis;name.ToolTip=w.Name;body.Children.Add(name);
             var status=Theme.Label(doc.WishlistState(w.Id).ToString(),11,Theme.Muted);status.Margin=new Thickness(0,4,0,4);body.Children.Add(status);
             var allocated = doc.WishlistAllocated(w.Id);
@@ -85,12 +102,38 @@ public sealed partial class MainWindow
         }
         else if(status is WishlistStatus.Purchased or WishlistStatus.Closed){var purchase=doc.WishlistEvents.Last(e=>e.WishlistId==w.Id&&e.Kind==WishlistEventKind.Purchased);var text=Theme.Label($"Actual Purchase: {Display.Money(purchase.Amount)} · {doc.BankName(purchase.FromBankId!.Value)}\nAdmin Fee: {Display.Money(purchase.Fee)}",14);text.Margin=new Thickness(0,12,0,0);panel.Children.Add(text);}
         if (w.Goals is not null)
+        {
             panel.Children.Add(WishlistGoals(w, status == WishlistStatus.Planned));
+            var members = doc.Wishlists.Where(item => item.ParentGroupId == w.Id).ToArray();
+            var ids = members.Select(item => item.Id).Append(w.Id).ToHashSet();
+            var total = doc.WishlistEvents.Where(e => ids.Contains(e.WishlistId) && e.Kind == WishlistEventKind.Purchased
+                && doc.Transactions.Any(t => t.Id == e.TransactionId)).Sum(e => e.Amount);
+            panel.Children.Add(Theme.Label("Total purchases: " + Display.Money(total), 14));
+            foreach (var member in members)
+            {
+                var purchase = doc.WishlistEvents.Last(e => e.WishlistId == member.Id && e.Kind == WishlistEventKind.Purchased);
+                panel.Children.Add(Theme.ActionButton($"{member.Name} · {doc.WishlistState(member.Id)} · {Display.Date(purchase.Date)} · {Display.Money(purchase.Amount)}",
+                    () => { selectedBank = null; selectedWishlist = member.Id; Render(); }));
+            }
+        }
         var actions=new WrapPanel{Margin=new Thickness(0,16,0,16)};
         void Add(string label,string action,bool enabled=true,bool primary=false){var b=Theme.ActionButton(label,()=>WishlistAction(action),primary);b.IsEnabled=enabled;b.Margin=new Thickness(0,0,4,4);actions.Children.Add(b);}
         if(status==WishlistStatus.Planned){Add("Allocate Funds","allocate",true,true);Add("Move Funds","move",allocated>0);Add("Release Funds","release",allocated>0);Add(w.Goals is null ? "Mark as Purchased" : "Purchase","purchase",w.Goals is null || w.ActiveGoals.Any());}
         if(status==WishlistStatus.Purchased){Add("Release Balance","balance",allocated>0,true);Add("Close Wishlist","close",allocated==0);}
         if (w.Goals is not null && status == WishlistStatus.Planned) Add("Reallocate Funds", "assign", allocated > 0);
+        if (w.Goals is null && status is (WishlistStatus.Purchased or WishlistStatus.Closed))
+        {
+            var groups = doc.Wishlists.Where(g => g.Goals is not null && g.Id != w.ParentGroupId && doc.WishlistState(g.Id) == WishlistStatus.Planned).ToArray();
+            var move = Theme.ActionButton("Move to Wishlist Group", () => PickGroup("Move to Wishlist Group", groups, "Name", group => {
+                var copy = doc.Copy();
+                copy.Wishlists[copy.Wishlists.FindIndex(item => item.Id == w.Id)] = w with { ParentGroupId = group.Id };
+                session.Apply(copy);
+                selectedBank = null;
+                selectedWishlist = group.Id;
+            }));
+            move.IsEnabled = groups.Length > 0;
+            actions.Children.Add(move);
+        }
         panel.Children.Add(actions);
         if(status==WishlistStatus.Purchased)panel.Children.Add(Theme.Label(allocated>0?"Release remaining allocation before closing. Status stays Purchased until you close it.":"No remaining allocation. Close the wishlist when you are ready.",12,Theme.Muted));
         var banksTitle=Theme.Label("Allocated by Account",16,bold:true);banksTitle.Margin=new Thickness(0,12,0,8);panel.Children.Add(banksTitle);

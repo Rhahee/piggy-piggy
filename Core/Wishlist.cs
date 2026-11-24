@@ -4,7 +4,7 @@ public enum WishlistStatus { Planned, Purchased, Closed, Cancelled }
 public enum WishlistPriority { Low, Normal, High }
 public enum WishlistEventKind { Created, Edited, Allocated, Released, Transferred, Reassigned, Purchased, PurchaseCorrected, Cancelled, Closed }
 public sealed record WishlistGoal(Guid Id, string Name, decimal? Estimate, bool Archived = false);
-public sealed record WishlistItem(Guid Id, string Name, decimal TargetAmount, DateOnly? TargetDate, WishlistPriority Priority, string Notes, WishlistGoal[]? Goals = null)
+public sealed record WishlistItem(Guid Id, string Name, decimal TargetAmount, DateOnly? TargetDate, WishlistPriority Priority, string Notes, WishlistGoal[]? Goals = null, Guid? ParentGroupId = null)
 {
     [System.Text.Json.Serialization.JsonIgnore]
     public IEnumerable<WishlistGoal> ActiveGoals => Goals?.Where(g => !g.Archived) ?? [];
@@ -47,6 +47,9 @@ public sealed partial class FinanceDocument
         foreach (var w in Wishlists)
         {
             Require(!string.IsNullOrWhiteSpace(w.Name) && w.Name == w.Name.Trim() && w.Name.Length <= 100,"Enter a wishlist name (up to 100 characters).");
+            if (w.ParentGroupId is Guid parent)
+                Require(Version >= 15 && w.Goals is null && WishlistState(w.Id) is (WishlistStatus.Purchased or WishlistStatus.Closed)
+                    && Wishlists.Any(group => group.Id == parent && group.Goals is not null), "Choose a wishlist group for a purchased item.");
             if (w.Goals is { } goals)
             {
                 Require(Version >= 10 && w.TargetAmount == 0, "Shared budgets require format 10 and use per-goal estimates.");
@@ -377,6 +380,8 @@ public static class WishlistService
             ?? throw new System.IO.InvalidDataException("Purchase not found.");
         Require(doc.Transactions.Any(t => t.Id == purchase.TransactionId), "This purchase was already corrected.");
         var d=doc.Copy(); d.Transactions.RemoveAll(t=>t.Id==purchase.TransactionId);
+        var memberIndex = d.Wishlists.FindIndex(w => w.Id == id && w.ParentGroupId.HasValue);
+        if (memberIndex >= 0) d.Wishlists[memberIndex] = d.Wishlists[memberIndex] with { ParentGroupId = null };
         Event(d,id,date,WishlistEventKind.PurchaseCorrected,purchase.Amount,to:purchase.FromBankId,tx:purchase.TransactionId,fee:purchase.Fee,goalId:purchase.GoalId,allocationGoalId:purchase.AllocationGoalId,text:$"Purchase reversed. Restored {Display.Money(purchase.Amount)} to {doc.BankName(purchase.FromBankId!.Value)} allocation. Previously released funds remain available.");
         if (purchase.AllocationGoalId is Guid goalId && d.Wishlists.Single(w => w.Id == id).Goals!.Any(g => g.Id == goalId && g.Archived))
             ShiftFunds(d, id, goalId, id, null, purchase.FromBankId!.Value, purchase.Amount, date);

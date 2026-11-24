@@ -24,7 +24,7 @@ public sealed record Transaction(Guid Id, DateOnly Date, TransactionKind Kind, G
 
 public sealed partial class FinanceDocument
 {
-    public const int CurrentVersion = 14;
+    public const int CurrentVersion = 15;
     public const string AdminFeeName = "Admin Fee";
     // Guid.Empty cannot be a user category ID; the UI uses it for the system fee filter.
     public static Guid AdminFeeFilterId => Guid.Empty;
@@ -80,7 +80,7 @@ public sealed partial class FinanceDocument
     public static bool IsMoney(decimal value) => decimal.Round(value, 2) == value && Math.Abs(value) <= 999_999_999_999_999.99m;
     public void Validate()
     {
-        Require(Format == "MyPiggyBank" && Version is 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or CurrentVersion, "This file format or version is not supported.");
+        Require(Format == "MyPiggyBank" && Version is 1 or 2 or 3 or 4 or 5 or 6 or 7 or 8 or 9 or 10 or 11 or 12 or 13 or 14 or CurrentVersion, "This file format or version is not supported.");
         Require(Version >= 5 || PaySchedule is null,"Pay-cycle settings require the current document format.");
         PaySchedule?.Validate();
         Require(Version >= 5 || SavedPeriod is null,"Saved report periods require document format 5.");

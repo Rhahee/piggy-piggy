@@ -47,7 +47,7 @@ Invalid("income cannot have destination",d => d.Transactions[0] = Income() with 
 Invalid("unknown bank rejected",d => d.Transactions[0] = Income() with { BankId = Guid.NewGuid() });
 Invalid("unknown enum rejected",d => d.Transactions[0] = Income() with { Kind = (TransactionKind)100 });
 Invalid("duplicate transaction ID rejected",d => d.Transactions.Add(d.Transactions[0]));
-Invalid("unsupported version rejected",d => d.Version = 15);
+Invalid("unsupported version rejected",d => d.Version = 16);
 Invalid("wrong format marker rejected",d => d.Format = "OtherApp");
 Test("optional description may be blank",() => { var d = Complete(); d.Transactions[0] = Income() with { Description = "" }; d.Validate(); });
 Test("category names can be reused across different types",() => { var d = Empty(); d.Categories.Add(new(Guid.NewGuid(),"Salary",CategoryKind.Expense)); d.Validate(); });
@@ -341,6 +341,23 @@ Test("transfer fee cannot be paid from allocated money",()=>{var d=WishlistServi
 Test("release returns funds to free balance without changing bank balance",()=>{var d=WishlistService.Release(WishlistFunded(),wishlistId,bankA.Id,500_000,wishlistDate);Equal(500_000m,d.WishlistAllocated(wishlistId,bankA.Id));Equal(4_500_000m,d.AvailableBalance(bankA.Id));Equal(5_000_000m,d.Balance(bankA.Id));});
 Test("release cannot exceed allocation",()=>Reject(()=>WishlistService.Release(WishlistFunded(),wishlistId,bankA.Id,1_000_001,wishlistDate)));
 Test("purchase requires allocation in the payment account even with sufficient bank balance",()=>Reject(()=>WishlistService.Purchase(WishlistFunded(),wishlistId,bankB.Id,food.Id,4_900_000,0,wishlistDate)));
+Test("grouping a closed wishlist preserves purchase history through save and corrections", () => {
+    var d = WishlistService.Close(WishlistService.ReleaseBalance(WishlistBought(), wishlistId, wishlistDate), wishlistId, wishlistDate);
+    var group = Laptop() with { Id = Guid.NewGuid(), Name = "Furniture", Goals = [], TargetAmount = 0 };
+    d = WishlistService.Create(d, group, wishlistDate);
+    var history = JsonSerializer.Serialize(d.WishlistEvents);
+    var transactions = JsonSerializer.Serialize(d.Transactions);
+    var index = d.Wishlists.FindIndex(w => w.Id == wishlistId);
+    d.Wishlists[index] = d.Wishlists[index] with { ParentGroupId = group.Id };
+    d.Validate();
+    var restored = JsonSerializer.Deserialize<FinanceDocument>(JsonSerializer.Serialize(d))!;
+    restored.Validate();
+    Equal<Guid?>(group.Id, restored.Wishlists[index].ParentGroupId);
+    Equal(WishlistStatus.Closed, restored.WishlistState(wishlistId));
+    Equal(history, JsonSerializer.Serialize(restored.WishlistEvents));
+    Equal(transactions, JsonSerializer.Serialize(restored.Transactions));
+    Equal<Guid?>(null, WishlistService.CorrectPurchase(restored, wishlistId, wishlistDate).Wishlists[index].ParentGroupId);
+});
 Test("purchase records linked expense and retains remainder",()=>{var d=WishlistBought();Equal(WishlistStatus.Purchased,d.WishlistState(wishlistId));Equal(100_000m,d.WishlistAllocated(wishlistId));Equal(997_000m,d.Balance(bankB.Id));Equal(4_905_500m,d.Totals(start,new(2026,10,31)).Expense);});
 Test("purchase category is mandatory",()=>Reject(()=>WishlistService.Purchase(WishlistMoved(),wishlistId,bankB.Id,Guid.Empty,4_900_000,0,wishlistDate)));
 Test("purchase admin fee uses only available balance",()=>Reject(()=>WishlistService.Purchase(WishlistMoved(),wishlistId,bankB.Id,food.Id,4_900_000,1_000_001,wishlistDate)));
