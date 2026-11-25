@@ -1,4 +1,10 @@
-# Verification — 0.2.2.4
+# Verification — 0.2.2.5
+
+## Purchased wishlist goals
+
+[Main CI](https://github.com/Rhahee/piggy-piggy/actions/runs/45521856578) and [tag CI](https://github.com/Rhahee/piggy-piggy/actions/runs/45522059138) passed for commit `54b86f2`. The WPF test checked the purchase amount, remaining target, and the effect of correcting a purchase. Package staging verified the checksum and source version. A format 15 fixture with 125 transactions retained equivalent data after saving and reopening a copy.
+
+The public update channel offered 0.2.2.5 to clients reporting 0.1.1.3 and 0.2.2.4, and reported 0.2.2.5 as up to date. The web installer resolved 0.2.2.5.
 
 ## Group detail popups
 
@@ -32,7 +38,7 @@ After channel promotion, the live updater offered 0.2.2.0 to clients reporting 0
 
 ## Baseline scope
 
-The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.2.2.4**, update epoch **3**, and document format **15**.
+The initial baseline includes bank accounts, Income/Expense/Transfer with separate Admin Fees, both Income fee bases, Purpose allocations, persistent Period/Pay Cycle, Wishlist, Debt and Self Debt. The current application version is **0.2.2.5**, update epoch **3**, and document format **15**.
 
 ## Automated checks
 
