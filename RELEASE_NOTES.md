@@ -1,7 +1,6 @@
-# Piggy 0.2.2.4 — Detail Grup Debt dan Wishlist
+# Piggy 0.2.2.5 — Status Pembelian Wishlist
 
-- Klik hutang, goal, atau barang yang sudah dibeli di dalam grup untuk membuka detailnya di jendela popup. Setelah ditutup, grup asal kembali terlihat.
-- Grup dan hutang individual menampilkan persentase pokok yang sudah dibayar.
-- Wishlist memakai daftar grup ringkas dan kartu ringkasan yang mengikuti tampilan Debt.
+- Goal Shared Budget yang sudah dibeli menampilkan status **Purchased** dan harga aktual di tabel serta popup detail.
+- Estimasi goal yang sudah dibeli keluar dari target tabungan grup. **Correct Purchase** mengembalikan estimasinya ke target jika pembelian dibatalkan.
 
 Rilis ini memakai format dokumen **15**.

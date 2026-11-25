@@ -21,8 +21,20 @@ public sealed partial class MainWindow
         }
         var card=Theme.Card(grid,new Thickness(4));card.Margin=new Thickness(12,8,12,0);return card;
     }
-    private static decimal WishlistTarget(WishlistItem item) =>
-        item.Goals is null ? item.TargetAmount : item.ActiveGoals.Sum(goal => goal.Estimate ?? 0);
+    private Dictionary<Guid, decimal> WishlistGoalPurchases(Guid wishlistId)
+    {
+        var doc = session.Document;
+        var transactions = doc.Transactions.Select(t => t.Id).ToHashSet();
+        return doc.WishlistEvents
+            .Where(e => e.WishlistId == wishlistId && e.Kind == WishlistEventKind.Purchased &&
+                e.GoalId.HasValue && e.TransactionId is Guid transaction && transactions.Contains(transaction))
+            .GroupBy(e => e.GoalId!.Value)
+            .ToDictionary(group => group.Key, group => group.Sum(e => e.Amount));
+    }
+
+    private static decimal WishlistTarget(WishlistItem item, IReadOnlyDictionary<Guid, decimal> purchases) =>
+        item.Goals is null ? item.TargetAmount : item.ActiveGoals
+            .Where(goal => !purchases.ContainsKey(goal.Id)).Sum(goal => goal.Estimate ?? 0);
 
     private ProgressBar WishlistProgress(decimal allocated, decimal target, string label, Thickness margin)
     {
@@ -74,7 +86,7 @@ public sealed partial class MainWindow
             var body=Ui.Stack();var name=Theme.Label(w.Name,14,bold:true);name.TextWrapping=TextWrapping.NoWrap;name.TextTrimming=TextTrimming.CharacterEllipsis;name.ToolTip=w.Name;body.Children.Add(name);
             var status=Theme.Label(doc.WishlistState(w.Id).ToString(),11,Theme.Muted);status.Margin=new Thickness(0,4,0,4);body.Children.Add(status);
             var allocated = doc.WishlistAllocated(w.Id);
-            var target = WishlistTarget(w);
+            var target = w.TargetAmount;
             var planned = doc.WishlistState(w.Id) == WishlistStatus.Planned;
             body.Children.Add(Theme.Label(Display.Money(allocated), 14, Theme.Accent));
             body.Children.Add(Theme.Label(planned && target > 0 ? "of " + Display.Money(target) : w.Goals is not null ? "Shared Budget" : "Remaining allocation", 12, Theme.Muted));
@@ -96,10 +108,12 @@ public sealed partial class MainWindow
         var metaRow=new DockPanel{Margin=new Thickness(0,6,0,16)};var targetDate=Theme.ActionButton("Edit Target Date",()=>{new WishlistTargetDateDialog(DetailOwner,session,w).ShowDialog();Render();});targetDate.Margin=new Thickness(8,0,0,0);DockPanel.SetDock(targetDate,Dock.Right);metaRow.Children.Add(targetDate);
         metaRow.Children.Add(Theme.Label("Planned: "+Display.Date(planned)+"    Priority: "+w.Priority+(w.TargetDate is DateOnly date?"    Target: "+Display.Date(date):""),12,Theme.Muted));panel.Children.Add(metaRow);
         var metrics=new Grid();metrics.ColumnDefinitions.Add(new ColumnDefinition());metrics.ColumnDefinitions.Add(new ColumnDefinition());
-        var targetAmount = WishlistTarget(w);
+        var purchases = WishlistGoalPurchases(w.Id);
+        var targetAmount = WishlistTarget(w, purchases);
         var target = Ui.Stack();
-        target.Children.Add(Theme.Label(w.Goals is null ? "Target Amount" : "Total Goal Estimates", 12, Theme.Muted));
-        target.Children.Add(Theme.Label(targetAmount > 0 ? Display.Money(targetAmount) : "No estimates yet", 20));
+        target.Children.Add(Theme.Label(w.Goals is null ? "Target Amount" : "Remaining Goal Estimates", 12, Theme.Muted));
+        var allGoalsPurchased = purchases.Count > 0 && w.ActiveGoals.All(goal => purchases.ContainsKey(goal.Id));
+        target.Children.Add(Theme.Label(targetAmount > 0 || allGoalsPurchased ? Display.Money(targetAmount) : "No estimates yet", 20));
         metrics.Children.Add(target);
         var funding=Ui.Stack();funding.Children.Add(Theme.Label(status==WishlistStatus.Planned?"Allocated Funds":"Remaining Allocation",12,Theme.Muted));funding.Children.Add(Theme.Label(Display.Money(allocated),20,Theme.Accent));Grid.SetColumn(funding,1);metrics.Children.Add(funding);panel.Children.Add(Theme.Card(metrics, new Thickness(12)));
         if (status == WishlistStatus.Planned && targetAmount > 0)
@@ -112,7 +126,7 @@ public sealed partial class MainWindow
         else if(status is WishlistStatus.Purchased or WishlistStatus.Closed){var purchase=doc.WishlistEvents.Last(e=>e.WishlistId==w.Id&&e.Kind==WishlistEventKind.Purchased);var text=Theme.Label($"Actual Purchase: {Display.Money(purchase.Amount)} · {doc.BankName(purchase.FromBankId!.Value)}\nAdmin Fee: {Display.Money(purchase.Fee)}",14);text.Margin=new Thickness(0,12,0,0);panel.Children.Add(text);}
         if (w.Goals is not null)
         {
-            panel.Children.Add(WishlistGoals(w, status == WishlistStatus.Planned));
+            panel.Children.Add(WishlistGoals(w, status == WishlistStatus.Planned, purchases));
             var members = doc.Wishlists.Where(item => item.ParentGroupId == w.Id).ToArray();
             var ids = members.Select(item => item.Id).Append(w.Id).ToHashSet();
             var total = doc.WishlistEvents.Where(e => ids.Contains(e.WishlistId) && e.Kind == WishlistEventKind.Purchased
@@ -168,7 +182,7 @@ public sealed partial class MainWindow
         if(!string.IsNullOrWhiteSpace(w.Notes)){var title=Theme.Label("Notes",16,bold:true);title.Margin=new Thickness(0,16,0,8);panel.Children.Add(title);panel.Children.Add(Theme.Label(w.Notes,14,Theme.Muted));}
         return panel;
     }
-    private UIElement WishlistGoals(WishlistItem budget, bool editable)
+    private UIElement WishlistGoals(WishlistItem budget, bool editable, IReadOnlyDictionary<Guid, decimal> purchases)
     {
         var doc = session.Document;
         var section = Ui.Stack();
@@ -184,7 +198,7 @@ public sealed partial class MainWindow
         if (editable)
             table.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto, MinWidth = 140 });
 
-        void AddRow(string name, string allocated, string estimate, string remaining, Brush background, StackPanel? actions = null, bool header = false, WishlistGoal? goal = null)
+        void AddRow(string name, string allocated, string estimate, string remaining, Brush background, StackPanel? actions = null, bool header = false, WishlistGoal? goal = null, string? purchased = null)
         {
             var row = table.RowDefinitions.Count;
             table.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -206,7 +220,7 @@ public sealed partial class MainWindow
                     var open = Theme.ActionButton(name, () => ShowMemberDetail(name, () => {
                         var details = Ui.Stack();
                         details.Children.Add(Theme.Label(name, 20, bold: true));
-                        details.Children.Add(Theme.Label($"Allocated: {allocated}    Estimate: {estimate}    Remaining: {remaining}", 14));
+                        details.Children.Add(Theme.Label(purchased ?? $"Allocated: {allocated}    Estimate: {estimate}    Remaining: {remaining}", 14));
                         foreach (var entry in doc.WishlistEvents.Where(e => e.WishlistId == budget.Id && (e.GoalId == goal.Id || e.AllocationGoalId == goal.Id)).OrderByDescending(e => e.Date))
                             details.Children.Add(Theme.Label(Display.Date(entry.Date) + " · " + WishlistPresentation.Description(entry), 13));
                         return details;
@@ -247,8 +261,10 @@ public sealed partial class MainWindow
                 actions.Children.Add(delete);
             }
             var balance = doc.WishlistBucket(budget.Id, goal.Id);
+            var purchased = purchases.TryGetValue(goal.Id, out var amount) ? "Purchased · " + Display.Money(amount) : null;
             AddRow(goal.Name, Display.Money(balance), goal.Estimate is decimal estimate ? Display.Money(estimate) : "—",
-                goal.Estimate is decimal target ? Display.Money(Math.Max(0, target - balance)) : "—", Theme.Surface, actions, goal: goal);
+                purchased ?? (goal.Estimate is decimal target ? Display.Money(Math.Max(0, target - balance)) : "—"),
+                Theme.Surface, actions, goal: goal, purchased: purchased);
         }
         section.Children.Add(new ScrollViewer { Content = table, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });

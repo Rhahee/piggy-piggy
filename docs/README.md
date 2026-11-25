@@ -13,6 +13,7 @@
 | [Rilis 0.1.1.0](releases/0.1.1.0.md) | Web installer, perbaikan DPI dan versi Windows |
 | [Rilis 0.1.1.1](releases/0.1.1.1.md) | Ikon grayscale MPB dan perbaikan kepemilikan asosiasi |
 | [Rilis 0.2.1.1](releases/0.2.1.1.md) | Tabel Goals dan baris saldo bebas |
+| [Rilis 0.2.2.5](releases/0.2.2.5.md) | Harga aktual pembelian dan sisa target Shared Budget |
 | [Rilis 0.2.2.4](releases/0.2.2.4.md) | Popup detail anggota grup dan persentase pelunasan |
 | [Rilis 0.2.2.3](releases/0.2.2.3.md) | Centang pelunasan hutang dan grup Debt |
 | [Rilis 0.2.2.2](releases/0.2.2.2.md) | Pindah wishlist yang sudah dibeli dan hutang ke grup |

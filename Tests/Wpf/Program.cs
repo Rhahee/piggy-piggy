@@ -119,7 +119,8 @@ internal static class Program
             try
             {
                 var goal = budget.Goals[0] with { Estimate = 1_500_000 };
-                detailSession.Apply(WishlistService.Edit(session.Document, budget with { Goals = [goal] }));
+                var pending = new WishlistGoal(Guid.NewGuid(), "Camera", 1_500_000);
+                detailSession.Apply(WishlistService.Edit(session.Document, budget with { Goals = [goal, pending] }));
                 var detail = typeof(MainWindow).GetMethod("WishlistDetail", BindingFlags.Instance | BindingFlags.NonPublic)!;
                 UIElement RenderDetail() => (UIElement)detail.Invoke(window, [detailSession.Document.Wishlists.Single()])!;
                 var content = RenderDetail();
@@ -130,6 +131,8 @@ internal static class Program
                 Equal(1, Grid.GetRow(unassigned));
                 var balance = goalTable.Children.OfType<TextBlock>().Single(t => Grid.GetRow(t) == 1 && Grid.GetColumn(t) == 1);
                 Equal(Display.Money(750_000), balance.Text);
+                var purchaseStatus = goalTable.Children.OfType<TextBlock>().Single(t => Grid.GetRow(t) == 2 && Grid.GetColumn(t) == 3);
+                Equal("Purchased · " + Display.Money(250_000), purchaseStatus.Text);
                 var viewport = (ScrollViewer)goalTable.Parent;
                 viewport.Measure(new Size(380, double.PositiveInfinity));
                 viewport.Arrange(new Rect(0, 0, 380, viewport.DesiredSize.Height));
@@ -138,9 +141,14 @@ internal static class Program
                 viewport.ScrollToRightEnd();
                 viewport.UpdateLayout();
                 Equal(viewport.ScrollableWidth, viewport.HorizontalOffset);
+                var purchase = detailSession.Document.WishlistEvents.Single(e => e.Kind == WishlistEventKind.Purchased);
+                var corrected = WishlistService.CorrectPurchase(detailSession.Document, budget.Id, DateOnly.FromDateTime(DateTime.Today), purchase.Id);
+                detailSession.Apply(corrected);
+                content = RenderDetail();
+                Equal(false, Desc<TextBlock>(content).Any(t => t.Text == "Purchased · " + Display.Money(250_000)));
+                Equal(true, Desc<TextBlock>(content).Any(t => t.Text == Display.Money(3_000_000)));
                 detailSession.Apply(WishlistService.DeleteGoal(detailSession.Document, budget.Id, goal.Id, DateOnly.FromDateTime(DateTime.Today)));
                 content = RenderDetail();
-                Equal(0, Desc<ProgressBar>(content).Count());
                 Equal(false, Desc<Button>(content).Any(b => AutomationProperties.GetName(b) == "Delete " + goal.Name));
             }
             finally { detailSession.New(); window.Close(); }
